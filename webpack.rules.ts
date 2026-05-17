@@ -10,6 +10,7 @@ export const rules: Required<ModuleOptions>['rules'] = [
   },
   {
     test: /[/\\]node_modules[/\\].+\.(m?js|node)$/,
+    exclude: /node_modules[/\\]monaco-editor[/\\]/,
     parser: { amd: false },
     use: {
       loader: '@vercel/webpack-asset-relocator-loader',
@@ -27,5 +28,15 @@ export const rules: Required<ModuleOptions>['rules'] = [
         transpileOnly: true,
       },
     },
+  },
+  // Monaco Editor requires TTF fonts (Codicon) and SVGs.
+  // Without asset rules these binary files crash the webpack bundle.
+  {
+    test: /\.(woff|woff2|eot|ttf|otf)$/,
+    type: 'asset/resource',
+  },
+  {
+    test: /\.svg$/,
+    type: 'asset/resource',
   },
 ];
