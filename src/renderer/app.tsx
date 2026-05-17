@@ -1,12 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
-
-// Import Monaco from the ESM path — NOT 'monaco-editor' (which resolves to
-// the AMD/min bundle that requires `define` and crashes in Electron's webpack).
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import './app.css';
 
-// Set up language workers manually (replaces monaco-editor-webpack-plugin).
-// We use webpack 5's built-in worker bundling via `new URL(..., import.meta.url).
+// ── Monaco worker setup ──────────────────────────────────────────────────────
 (self as any).MonacoEnvironment = {
   getWorker(_moduleId: string, label: string) {
     if (label === 'json') {
@@ -25,53 +22,205 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
   },
 };
 
-// Tell @monaco-editor/react to use our locally-bundled monaco instance
-// instead of fetching from cdn.jsdelivr.net (which Electron's CSP blocks).
 loader.config({ monaco });
 
-import './app.css';
-
-const INITIAL_CODE = `// Welcome to Orbit AI
-function greet(name: string): string {
-  return \`Hello, \${name}!\`;
+// ── Types ────────────────────────────────────────────────────────────────────
+interface FileNode {
+  name: string;
+  type: 'file' | 'directory';
+  path: string;
+  children?: FileNode[];
 }
 
-console.log(greet('Orbit AI'));
-`;
+declare global {
+  interface Window {
+    electronAPI: {
+      openFolder: () => Promise<string | null>;
+      readFile: (path: string) => Promise<string>;
+      writeFile: (path: string, content: string) => Promise<boolean>;
+      getFileTree: (folderPath: string) => Promise<FileNode[]>;
+    };
+  }
+}
 
-function App() {
-  const [code, setCode] = useState(INITIAL_CODE);
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const EXT_LANGUAGE: Record<string, string> = {
+  ts: 'typescript', tsx: 'typescript',
+  js: 'javascript', jsx: 'javascript',
+  json: 'json', md: 'markdown',
+  css: 'css', html: 'html', py: 'python',
+  sh: 'shell', yaml: 'yaml', yml: 'yaml',
+};
+
+function getLanguage(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  return EXT_LANGUAGE[ext] ?? 'plaintext';
+}
+
+function basename(filePath: string): string {
+  return filePath.split(/[/\\]/).pop() ?? filePath;
+}
+
+// ── FileTree component ───────────────────────────────────────────────────────
+interface FileTreeProps {
+  nodes: FileNode[];
+  depth: number;
+  currentFile: string | null;
+  onFileClick: (path: string) => void;
+}
+
+function FileTree({ nodes, depth, currentFile, onFileClick }: FileTreeProps) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggle = (p: string) =>
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(p) ? next.delete(p) : next.add(p);
+      return next;
+    });
 
   return (
-    <div className="shell">
-      <div className="titlebar">Orbit AI</div>
+    <>
+      {nodes.map(node => (
+        <div key={node.path}>
+          {node.type === 'directory' ? (
+            <>
+              <div
+                className="tree-item tree-item--dir"
+                style={{ paddingLeft: 8 + depth * 12 }}
+                onClick={() => toggle(node.path)}
+              >
+                <span className="tree-item__arrow">
+                  {expanded.has(node.path) ? '▾' : '▸'}
+                </span>
+                <span className="tree-item__icon">📁</span>
+                {node.name}
+              </div>
+              {expanded.has(node.path) && node.children && (
+                <FileTree
+                  nodes={node.children}
+                  depth={depth + 1}
+                  currentFile={currentFile}
+                  onFileClick={onFileClick}
+                />
+              )}
+            </>
+          ) : (
+            <div
+              className={`tree-item tree-item--file${currentFile === node.path ? ' tree-item--active' : ''}`}
+              style={{ paddingLeft: 20 + depth * 12 }}
+              onClick={() => onFileClick(node.path)}
+            >
+              <span className="tree-item__icon">📄</span>
+              {node.name}
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
 
-      <div className="body">
-        <div className="activity-bar">
-          <div className="activity-icon" title="Explorer">📁</div>
+// ── App ──────────────────────────────────────────────────────────────────────
+function App() {
+  const [folderPath, setFolderPath] = useState<string | null>(null);
+  const [fileTree, setFileTree]     = useState<FileNode[]>([]);
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [code, setCode]             = useState('');
+  const [language, setLanguage]     = useState('typescript');
+  const [saved, setSaved]           = useState(true);
+  const editorRef = useRef<any>(null);
+
+  const openFolder = async () => {
+    const selected = await window.electronAPI.openFolder();
+    if (!selected) return;
+    setFolderPath(selected);
+    const tree = await window.electronAPI.getFileTree(selected);
+    setFileTree(tree);
+  };
+
+  const loadFile = async (filePath: string) => {
+    const content = await window.electronAPI.readFile(filePath);
+    setCurrentFile(filePath);
+    setCode(content);
+    setLanguage(getLanguage(filePath));
+    setSaved(true);
+  };
+
+  const saveFile = useCallback(async () => {
+    if (!currentFile || !editorRef.current) return;
+    await window.electronAPI.writeFile(currentFile, editorRef.current.getValue());
+    setSaved(true);
+  }, [currentFile]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        saveFile();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [saveFile]);
+
+  const folderName = folderPath ? basename(folderPath) : null;
+  const fileName   = currentFile ? basename(currentFile) : null;
+
+  return (
+    <div className="ide-shell">
+
+      {/* ── Title bar ── */}
+      <div className="ide-titlebar">
+        <span className="ide-titlebar__title">
+          Orbit AI{folderName ? ` — ${folderName}` : ''}
+        </span>
+        <button className="ide-titlebar__btn" onClick={openFolder}>
+          Open Folder
+        </button>
+      </div>
+
+      <div className="ide-body">
+
+        {/* ── Activity bar ── */}
+        <div className="ide-activity">
+          <div className="ide-activity__icon" title="Explorer">📁</div>
         </div>
 
-        <div className="sidebar">
-          <div className="sidebar-header">Explorer</div>
-          <div className="sidebar-content">
-            <div className="sidebar-item">📂 src</div>
-            <div className="sidebar-item" style={{ paddingLeft: 32 }}>📄 index.ts</div>
-            <div className="sidebar-item" style={{ paddingLeft: 32 }}>📂 renderer</div>
-            <div className="sidebar-item" style={{ paddingLeft: 48 }}>📄 app.tsx</div>
-            <div className="sidebar-item" style={{ paddingLeft: 48 }}>📄 main.tsx</div>
+        {/* ── Sidebar / File Explorer ── */}
+        <div className="ide-sidebar">
+          <div className="ide-sidebar__header">Explorer</div>
+          {folderName && (
+            <div className="ide-sidebar__root">{folderName}</div>
+          )}
+          {!folderPath && (
+            <div className="ide-sidebar__empty">No folder opened</div>
+          )}
+          <div className="ide-sidebar__tree">
+            <FileTree
+              nodes={fileTree}
+              depth={0}
+              currentFile={currentFile}
+              onFileClick={loadFile}
+            />
           </div>
         </div>
 
-        <div className="editor-area">
-          <div className="tab-bar">
-            <div className="tab">app.tsx</div>
+        {/* ── Editor ── */}
+        <div className="ide-editor">
+          <div className="ide-tabs">
+            <div className="ide-tab">
+              {fileName ?? 'Untitled'}
+              {!saved && <span className="ide-tab__dot"> ●</span>}
+            </div>
           </div>
-          <div className="monaco-container">
+          <div className="ide-monaco">
             <Editor
               height="100%"
-              defaultLanguage="typescript"
+              language={language}
               value={code}
-              onChange={(val) => setCode(val ?? '')}
+              onChange={val => { setCode(val ?? ''); setSaved(false); }}
+              onMount={editor => { editorRef.current = editor; }}
               theme="vs-dark"
               options={{
                 minimap: { enabled: true },
@@ -84,17 +233,23 @@ function App() {
           </div>
         </div>
 
-        <div className="right-panel">
-          <div style={{ fontWeight: 600, color: '#cccccc', marginBottom: 8 }}>AI Chat</div>
-          <div>Composer panel coming soon…</div>
+        {/* ── AI Chat sidebar ── */}
+        <div className="ide-chat">
+          <div className="ide-chat__title">Orbit AI Chat</div>
+          <div className="ide-chat__body">
+            AI assistant coming soon…
+          </div>
         </div>
+
       </div>
 
-      <div className="statusbar">
-        <span>main branch</span>
-        <span>TypeScript</span>
+      {/* ── Status bar ── */}
+      <div className="ide-statusbar">
+        <span>{saved ? 'Saved' : '● Unsaved'}</span>
+        <span>{language}</span>
         <span>Orbit AI v0.1</span>
       </div>
+
     </div>
   );
 }
