@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-
+import { spawn } from 'child_process';
 interface FileNode {
   name: string;
   type: 'file' | 'directory';
@@ -97,6 +97,29 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
   }
 
   return getTree(folderPath);
+});
+
+ipcMain.handle('terminal:create', (event) => {
+  const shell = spawn('powershell.exe', [], {
+    cwd: process.env.HOME || process.env.USERPROFILE,
+    env: process.env as { [key: string]: string },
+  });
+
+  shell.stdout.on('data', (data) => {
+    event.sender.send('terminal:data', data.toString());
+  });
+
+  shell.stderr.on('data', (data) => {
+    event.sender.send('terminal:data', data.toString());
+  });
+
+  ipcMain.on('terminal:write', (_e, data: string) => {
+    shell.stdin.write(data);
+  });
+
+  shell.on('close', () => {
+    event.sender.send('terminal:data', '\r\n[Process exited]\r\n');
+  });
 });
 
 app.on('ready', createWindow);

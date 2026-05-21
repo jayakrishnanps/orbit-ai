@@ -244,3 +244,11 @@ body,
   flex-shrink: 0;
   gap: 16px;
 }
+
+.ide-terminal {
+  height: 250px;
+  width: 100%;
+  background: #1e1e1e;
+  overflow: hidden;
+  border-top: 1px solid #2d2d2e;
+}

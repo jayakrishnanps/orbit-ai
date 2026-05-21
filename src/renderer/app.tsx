@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import './app.css';
+import TerminalPanel from './Terminal';
 
 // ── Monaco worker setup ──────────────────────────────────────────────────────
 (self as any).MonacoEnvironment = {
@@ -230,6 +231,9 @@ function App() {
                 automaticLayout: true,
               }}
             />
+          </div>
+          <div className="ide-terminal">
+            <TerminalPanel />
           </div>
         </div>
 
