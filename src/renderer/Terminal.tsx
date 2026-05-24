@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
-export default function TerminalPanel() {
+export default function TerminalPanel({ folderPath }: { folderPath?: string | null }) {
   const divRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export default function TerminalPanel() {
     term.open(divRef.current!);
     fitAddon.fit();
 
-    (window as any).electronAPI.terminalCreate();
+    (window as any).electronAPI.terminalCreate(folderPath ?? undefined);
 
     (window as any).electronAPI.onTerminalData((data: string) => {
       term.write(data);
@@ -34,7 +34,7 @@ export default function TerminalPanel() {
       observer.disconnect();
       term.dispose();
     };
-  }, []);
+  }, [folderPath]);
 
   return <div ref={divRef} style={{ height: '100%', width: '100%' }} />;
 }

@@ -75,3 +75,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Feature/implementation notes
+integrated-terminal-implementation.md
+file-explorer-editor-implementation.md
+orbit-ai-chat-terminal-fix.md
+orbit-ai-chat-streaming-actions.md

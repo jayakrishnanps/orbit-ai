@@ -3,6 +3,8 @@ import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import './app.css';
 import TerminalPanel from './Terminal';
+import { FileTree, FileNode } from './FileTree';
+import AIChat from './AIChat';
 
 // ── Monaco worker setup ──────────────────────────────────────────────────────
 (self as any).MonacoEnvironment = {
@@ -25,14 +27,7 @@ import TerminalPanel from './Terminal';
 
 loader.config({ monaco });
 
-// ── Types ────────────────────────────────────────────────────────────────────
-interface FileNode {
-  name: string;
-  type: 'file' | 'directory';
-  path: string;
-  children?: FileNode[];
-}
-
+// ── Global type augmentation ──────────────────────────────────────────────────
 declare global {
   interface Window {
     electronAPI: {
@@ -40,11 +35,16 @@ declare global {
       readFile: (path: string) => Promise<string>;
       writeFile: (path: string, content: string) => Promise<boolean>;
       getFileTree: (folderPath: string) => Promise<FileNode[]>;
+      terminalCreate: (cwd?: string) => Promise<void>;
+      terminalWrite: (data: string) => void;
+      terminalResize: (cols: number, rows: number) => void;
+      onTerminalData: (cb: (data: string) => void) => void;
+      aiChat: (apiKey: string, messages: { role: string; content: string }[]) => Promise<string>;
     };
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const EXT_LANGUAGE: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript',
   js: 'javascript', jsx: 'javascript',
@@ -62,67 +62,7 @@ function basename(filePath: string): string {
   return filePath.split(/[/\\]/).pop() ?? filePath;
 }
 
-// ── FileTree component ───────────────────────────────────────────────────────
-interface FileTreeProps {
-  nodes: FileNode[];
-  depth: number;
-  currentFile: string | null;
-  onFileClick: (path: string) => void;
-}
-
-function FileTree({ nodes, depth, currentFile, onFileClick }: FileTreeProps) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const toggle = (p: string) =>
-    setExpanded(prev => {
-      const next = new Set(prev);
-      next.has(p) ? next.delete(p) : next.add(p);
-      return next;
-    });
-
-  return (
-    <>
-      {nodes.map(node => (
-        <div key={node.path}>
-          {node.type === 'directory' ? (
-            <>
-              <div
-                className="tree-item tree-item--dir"
-                style={{ paddingLeft: 8 + depth * 12 }}
-                onClick={() => toggle(node.path)}
-              >
-                <span className="tree-item__arrow">
-                  {expanded.has(node.path) ? '▾' : '▸'}
-                </span>
-                <span className="tree-item__icon">📁</span>
-                {node.name}
-              </div>
-              {expanded.has(node.path) && node.children && (
-                <FileTree
-                  nodes={node.children}
-                  depth={depth + 1}
-                  currentFile={currentFile}
-                  onFileClick={onFileClick}
-                />
-              )}
-            </>
-          ) : (
-            <div
-              className={`tree-item tree-item--file${currentFile === node.path ? ' tree-item--active' : ''}`}
-              style={{ paddingLeft: 20 + depth * 12 }}
-              onClick={() => onFileClick(node.path)}
-            >
-              <span className="tree-item__icon">📄</span>
-              {node.name}
-            </div>
-          )}
-        </div>
-      ))}
-    </>
-  );
-}
-
-// ── App ──────────────────────────────────────────────────────────────────────
+// ── App ───────────────────────────────────────────────────────────────────────
 function App() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [fileTree, setFileTree]     = useState<FileNode[]>([]);
@@ -154,6 +94,35 @@ function App() {
     setSaved(true);
   }, [currentFile]);
 
+  const applyToEditor = (aiCode: string, mode: 'insert' | 'replace') => {
+    if (!editorRef.current) return;
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+    
+    // Extract code block content if it is a markdown code block
+    let cleanedCode = aiCode;
+    const codeBlockMatch = aiCode.match(/```[a-z]*\n([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      cleanedCode = codeBlockMatch[1];
+    }
+    
+    if (mode === 'replace' && selection) {
+      editor.executeEdits('ai-apply', [{
+        range: selection,
+        text: cleanedCode,
+      }]);
+    } else {
+      // insert at cursor
+      const position = editor.getPosition();
+      editor.executeEdits('ai-apply', [{
+        range: { startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: position.lineNumber, endColumn: position.column },
+        text: cleanedCode,
+      }]);
+    }
+    saveFile();
+  };
+
+  // Ctrl+S global save
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 's') {
@@ -195,7 +164,9 @@ function App() {
             <div className="ide-sidebar__root">{folderName}</div>
           )}
           {!folderPath && (
-            <div className="ide-sidebar__empty">No folder opened</div>
+            <div className="ide-sidebar__empty">
+              <p>No folder opened</p>
+            </div>
           )}
           <div className="ide-sidebar__tree">
             <FileTree
@@ -207,51 +178,63 @@ function App() {
           </div>
         </div>
 
-        {/* ── Editor ── */}
+        {/* ── Editor + Terminal column ── */}
         <div className="ide-editor">
+
+          {/* Tab bar */}
           <div className="ide-tabs">
             <div className="ide-tab">
-              {fileName ?? 'Untitled'}
+              {fileName ?? 'No file open'}
               {!saved && <span className="ide-tab__dot"> ●</span>}
             </div>
           </div>
+
+          {/* Monaco */}
           <div className="ide-monaco">
-            <Editor
-              height="100%"
-              language={language}
-              value={code}
-              onChange={val => { setCode(val ?? ''); setSaved(false); }}
-              onMount={editor => { editorRef.current = editor; }}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: true },
-                fontSize: 14,
-                wordWrap: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-              }}
-            />
+            {currentFile ? (
+              <Editor
+                height="100%"
+                language={language}
+                value={code}
+                onChange={val => { setCode(val ?? ''); setSaved(false); }}
+                onMount={editor => { editorRef.current = editor; }}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: true },
+                  fontSize: 14,
+                  wordWrap: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                }}
+              />
+            ) : (
+              <div className="ide-editor__empty">
+                <div className="ide-editor__empty-icon">🛸</div>
+                <p>Open a folder and select a file to start editing</p>
+              </div>
+            )}
           </div>
+
+          {/* Terminal */}
           <div className="ide-terminal">
-            <TerminalPanel />
+            <TerminalPanel folderPath={folderPath} />
           </div>
+
         </div>
 
         {/* ── AI Chat sidebar ── */}
         <div className="ide-chat">
-          <div className="ide-chat__title">Orbit AI Chat</div>
-          <div className="ide-chat__body">
-            AI assistant coming soon…
-          </div>
+          <AIChat currentFile={currentFile} currentCode={code} onApplyCode={applyToEditor} />
         </div>
 
       </div>
 
       {/* ── Status bar ── */}
       <div className="ide-statusbar">
-        <span>{saved ? 'Saved' : '● Unsaved'}</span>
-        <span>{language}</span>
-        <span>Orbit AI v0.1</span>
+        <span>{saved ? 'Saved' : '● Unsaved changes'}</span>
+        <span>{currentFile ? language : ''}</span>
+        <span>{currentFile ?? 'No file open'}</span>
+        <span className="ide-statusbar__right">Orbit AI v0.1</span>
       </div>
 
     </div>

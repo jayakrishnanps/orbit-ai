@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'child_process';
+import Groq from 'groq-sdk';
 interface FileNode {
   name: string;
   type: 'file' | 'directory';
@@ -99,10 +100,11 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
   return getTree(folderPath);
 });
 
-ipcMain.handle('terminal:create', (event) => {
+ipcMain.handle('terminal:create', (event, cwd?: string) => {
   const shell = spawn('powershell.exe', [], {
-    cwd: process.env.HOME || process.env.USERPROFILE,
+    cwd: cwd || process.env.HOME || process.env.USERPROFILE,
     env: process.env as { [key: string]: string },
+    stdio: ['pipe', 'pipe', 'pipe'],
   });
 
   shell.stdout.on('data', (data) => {
@@ -120,6 +122,15 @@ ipcMain.handle('terminal:create', (event) => {
   shell.on('close', () => {
     event.sender.send('terminal:data', '\r\n[Process exited]\r\n');
   });
+});
+
+ipcMain.handle('ai:chat', async (_event, { apiKey, messages }: { apiKey: string; messages: { role: string; content: string }[] }) => {
+  const groq = new Groq({ apiKey });
+  const completion = await groq.chat.completions.create({
+    model: 'llama3-8b-8192',
+    messages: messages as Groq.Chat.ChatCompletionMessageParam[],
+  });
+  return completion.choices[0]?.message?.content ?? '';
 });
 
 app.on('ready', createWindow);
