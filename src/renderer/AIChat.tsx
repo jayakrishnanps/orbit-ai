@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
@@ -31,68 +31,38 @@ export default function AIChat({ currentFile, currentCode, onApplyCode }: AIChat
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
-    if (!apiKey) { setShowKey(true); return; }
+    if (!apiKey || !input.trim()) return;
 
     const userMessage = input.trim();
-    setInput('');
-    setError('');
-
-    const newHistory: Message[] = [...messages, { role: 'user', content: userMessage }];
+    const newHistory = [...messages, { role: 'user' as const, content: userMessage }];
     setMessages(newHistory);
+    setInput(''); // clear input immediately
 
     const systemPrompt = currentFile
       ? `You are Orbit AI, an expert coding assistant.\n\nCurrent file: ${currentFile}\n\`\`\`\n${currentCode.slice(0, 8000)}\n\`\`\``
       : `You are Orbit AI, an expert coding assistant.`;
 
-    const fullMessages = [{ role: 'system', content: systemPrompt }, ...newHistory];
-    
-    setLoading(true);
+    const fullMessages = [{ role: 'system' as const, content: systemPrompt }, ...newHistory];
+
+    setMessages(prev => [...prev, { role: 'assistant' as const, content: '' }]);
+
     let assistantMessage = '';
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+    const chunkHandler = (delta: string) => {
+      assistantMessage += delta;
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1].content = assistantMessage;
+        return updated;
+      });
+    };
+
+    (window as any).electronAPI.onStreamChunk(chunkHandler);
 
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: fullMessages,
-          stream: true,
-        }),
-      });
-
-      const reader = response.body?.getReader();
-      
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data.trim() === '[DONE]') break;
-            try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices[0]?.delta?.content || '';
-              assistantMessage += delta;
-              setMessages(prev => {
-                const updated = [...prev];
-                updated[updated.length - 1].content = assistantMessage;
-                return updated;
-              });
-            } catch {}
-          }
-        }
-      }
-    } catch (e: any) {
-      setError(e?.message ?? 'Request failed');
+      await (window as any).electronAPI.aiStream(apiKey, fullMessages);
     } finally {
-      setLoading(false);
+      // optional cleanup
     }
   };
 

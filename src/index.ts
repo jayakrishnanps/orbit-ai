@@ -50,6 +50,18 @@ ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
   return true;
 });
 
+ipcMain.handle('fs:createFile', async (_event, path: string, content: string = '') => {
+  const fs = await import('fs/promises');
+  await fs.writeFile(path, content, 'utf-8');
+  return true;
+});
+
+ipcMain.handle('fs:createDirectory', async (_event, path: string) => {
+  const fs = await import('fs/promises');
+  await fs.mkdir(path, { recursive: true });
+  return true;
+});
+
 ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
   const ignored = new Set([
     'node_modules',
@@ -110,18 +122,22 @@ ipcMain.handle('terminal:create', (event, cwd?: string) => {
   shell.stdout.on('data', (data) => {
     event.sender.send('terminal:data', data.toString());
   });
-
   shell.stderr.on('data', (data) => {
     event.sender.send('terminal:data', data.toString());
+  });
+  shell.on('close', () => {
+    event.sender.send('terminal:data', '\r\n[Process exited]\r\n');
   });
 
   ipcMain.on('terminal:write', (_e, data: string) => {
     shell.stdin.write(data);
   });
 
-  shell.on('close', () => {
-    event.sender.send('terminal:data', '\r\n[Process exited]\r\n');
+  ipcMain.on('terminal:resize', (_e, { cols, rows }) => {
+    // resize not supported in spawn, but kept for compatibility
   });
+
+  return { pid: shell.pid };
 });
 
 ipcMain.handle('ai:chat', async (_event, { apiKey, messages }: { apiKey: string; messages: { role: string; content: string }[] }) => {
@@ -131,6 +147,26 @@ ipcMain.handle('ai:chat', async (_event, { apiKey, messages }: { apiKey: string;
     messages: messages as Groq.Chat.ChatCompletionMessageParam[],
   });
   return completion.choices[0]?.message?.content ?? '';
+});
+
+ipcMain.handle('ai:stream', async (event, { apiKey, messages }) => {
+  const groq = new Groq({ apiKey });
+
+  const stream = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: messages as any,
+    stream: true,
+  });
+
+  let fullContent = '';
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content || '';
+    if (delta) {
+      fullContent += delta;
+      event.sender.send('ai:stream-chunk', delta);
+    }
+  }
+  return fullContent;
 });
 
 app.on('ready', createWindow);

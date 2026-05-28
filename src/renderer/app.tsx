@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import './app.css';
 import TerminalPanel from './Terminal';
 import { FileTree, FileNode } from './FileTree';
 import AIChat from './AIChat';
+import EditorTabs from './EditorTabs';
 
 // ── Monaco worker setup ──────────────────────────────────────────────────────
 (self as any).MonacoEnvironment = {
@@ -66,11 +67,15 @@ function basename(filePath: string): string {
 function App() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [fileTree, setFileTree]     = useState<FileNode[]>([]);
-  const [currentFile, setCurrentFile] = useState<string | null>(null);
-  const [code, setCode]             = useState('');
+  const [tabs, setTabs] = useState<{ path: string; name: string; content: string; saved: boolean }[]>([]);
+  const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [language, setLanguage]     = useState('typescript');
-  const [saved, setSaved]           = useState(true);
   const editorRef = useRef<any>(null);
+
+  const activeTab = useMemo(() => tabs.find(t => t.path === activeTabPath) || null, [tabs, activeTabPath]);
+  const currentFile = activeTab?.path ?? null;
+  const code = activeTab?.content ?? '';
+  const saved = activeTab?.saved ?? true;
 
   const openFolder = async () => {
     const selected = await window.electronAPI.openFolder();
@@ -80,18 +85,47 @@ function App() {
     setFileTree(tree);
   };
 
-  const loadFile = async (filePath: string) => {
+  const openFileInNewTab = async (filePath: string) => {
     const content = await window.electronAPI.readFile(filePath);
-    setCurrentFile(filePath);
-    setCode(content);
+    const name = filePath.split(/[/\\]/).pop() || 'Untitled';
+    setTabs(prev => {
+      const existing = prev.find(t => t.path === filePath);
+      if (existing) return prev;
+      return [...prev, { path: filePath, name, content, saved: true }];
+    });
+    setActiveTabPath(filePath);
     setLanguage(getLanguage(filePath));
-    setSaved(true);
+  };
+
+  const closeTab = (path: string) => {
+    setTabs(prev => {
+      const newTabs = prev.filter(t => t.path !== path);
+      if (activeTabPath === path && newTabs.length > 0) {
+        setActiveTabPath(newTabs[newTabs.length - 1].path);
+      } else if (newTabs.length === 0) {
+        setActiveTabPath(null);
+      }
+      return newTabs;
+    });
+  };
+
+  const switchTab = (path: string) => {
+    setActiveTabPath(path);
+    const tab = tabs.find(t => t.path === path);
+    if (tab) setLanguage(getLanguage(path));
+  };
+
+  const loadFile = (filePath: string) => {
+    openFileInNewTab(filePath);
   };
 
   const saveFile = useCallback(async () => {
     if (!currentFile || !editorRef.current) return;
-    await window.electronAPI.writeFile(currentFile, editorRef.current.getValue());
-    setSaved(true);
+    const newContent = editorRef.current.getValue();
+    await window.electronAPI.writeFile(currentFile, newContent);
+    setTabs(prev => prev.map(t =>
+      t.path === currentFile ? { ...t, content: newContent, saved: true } : t
+    ));
   }, [currentFile]);
 
   const applyToEditor = (aiCode: string, mode: 'insert' | 'replace') => {
@@ -182,12 +216,12 @@ function App() {
         <div className="ide-editor">
 
           {/* Tab bar */}
-          <div className="ide-tabs">
-            <div className="ide-tab">
-              {fileName ?? 'No file open'}
-              {!saved && <span className="ide-tab__dot"> ●</span>}
-            </div>
-          </div>
+          <EditorTabs
+            tabs={tabs.map(t => ({ path: t.path, name: t.name, saved: t.saved }))}
+            activeTabPath={activeTabPath}
+            onTabClick={switchTab}
+            onTabClose={closeTab}
+          />
 
           {/* Monaco */}
           <div className="ide-monaco">
@@ -196,7 +230,12 @@ function App() {
                 height="100%"
                 language={language}
                 value={code}
-                onChange={val => { setCode(val ?? ''); setSaved(false); }}
+                onChange={val => {
+                  const newVal = val ?? '';
+                  setTabs(prev => prev.map(t =>
+                    t.path === activeTabPath ? { ...t, content: newVal, saved: false } : t
+                  ));
+                }}
                 onMount={editor => { editorRef.current = editor; }}
                 theme="vs-dark"
                 options={{
@@ -224,7 +263,7 @@ function App() {
 
         {/* ── AI Chat sidebar ── */}
         <div className="ide-chat">
-          <AIChat currentFile={currentFile} currentCode={code} onApplyCode={applyToEditor} />
+          <AIChat currentFile={activeTabPath} currentCode={code} onApplyCode={applyToEditor} />
         </div>
 
       </div>
