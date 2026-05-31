@@ -14,6 +14,8 @@ import { rendererConfig } from './webpack.renderer.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    // Required for node-pty native .node modules to work inside ASAR archive
+    asarUnpack: ['**/node-pty/**'],
   },
   rebuildConfig: {},
   makers: [

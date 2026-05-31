@@ -1,0 +1,410 @@
+================================================================================
+                           ORBIT AI — PROJECT DOCUMENTATION
+================================================================================
+Generated: 2025
+Repository: orbit-ai
+Author: Jayakrishnan PS <jayakrishnanps12@gmail.com>
+License: MIT
+================================================================================
+
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+
+Orbit AI is a lightweight, AI-powered desktop code editor / IDE built on
+Electron. It provides a modern development environment with:
+
+- A full-featured code editor powered by Monaco (the engine behind VS Code)
+- An integrated terminal (PowerShell on Windows)
+- A powerful AI coding assistant sidebar powered by Groq LLMs
+
+The application enables developers to open any local folder, browse files,
+edit code with syntax highlighting and IntelliSense, execute shell commands,
+and receive contextual AI assistance — all within a single desktop window.
+
+Target Users:
+- Individual developers and hobbyists who want AI assistance without using
+  heavy IDEs or cloud-based editors.
+- Users who prefer a fast, native desktop experience with full local file
+  system access.
+- Developers working on Windows who want a simple yet capable AI-augmented
+  editor.
+
+Why It Exists:
+Orbit AI was created to explore building a practical, privacy-friendly,
+fully-local AI coding companion that combines the power of modern LLMs
+(Groq) with familiar desktop editing workflows, without requiring users to
+upload entire projects to third-party platforms.
+
+
+2. TECHNOLOGY STACK
+--------------------------------------------------------------------------------
+
+Languages:
+- TypeScript (primary language for both main and renderer processes)
+- JavaScript (minimal, via dependencies)
+
+Core Frameworks & Runtimes:
+- Electron 42.0.0 (desktop application framework)
+- React 19.2.5 (UI library for the renderer process)
+- React DOM 19.2.5
+
+Key Libraries:
+- @monaco-editor/react + monaco-editor — Professional code editor component
+- @xterm/xterm + @xterm/addon-fit — Terminal emulator in the browser
+- groq-sdk — Official Groq AI client for chat completions and streaming
+
+Build & Tooling:
+- Electron Forge 7.11.x (application packaging and distribution)
+- Webpack 5 (via @electron-forge/plugin-webpack)
+- TypeScript ~4.5.4
+- ts-loader + ForkTsCheckerWebpackPlugin
+- ESLint with TypeScript and Electron plugins
+- CSS Modules / plain CSS for styling
+
+Platform:
+- Primarily developed and tested on Windows (hardcoded PowerShell usage)
+- Electron Forge makers configured for Squirrel (Windows), ZIP (macOS),
+  DEB and RPM (Linux)
+
+
+3. FRONTEND ARCHITECTURE
+--------------------------------------------------------------------------------
+
+The frontend (renderer process) is a single-page React application.
+
+Main Entry Point:
+- src/renderer/main.tsx — Bootstraps React root
+
+Core Component Layout (src/renderer/app.tsx):
+The application uses a classic IDE three-column layout:
+
+┌─────────────────────────────────────────────────────────────┐
+│ Title Bar (draggable, shows current folder)                 │
+├────────┬──────────────────────────────┬─────────────────────┤
+│        │                              │                     │
+│ Activity│   Editor Area                │   AI Chat Sidebar   │
+│ Bar    │   ┌────────────────────┐     │   (300px fixed)     │
+│ (48px) │   │ Tab Bar            │     │                     │
+│        │   ├────────────────────┤     │ - Chat history      │
+│        │   │                    │     │ - Groq API key UI   │
+│        │   │   Monaco Editor    │     │ - Context indicator │
+│        │   │                    │     │ - Insert/Replace    │
+│        │   │                    │     │   actions           │
+│        │   └────────────────────┘     │                     │
+│        │   ┌────────────────────┐     │                     │
+│        │   │ Integrated Terminal│     │                     │
+│        │   │ (xterm.js)         │     │                     │
+│        │   └────────────────────┘     │                     │
+│        │                              │                     │
+├────────┴──────────────────────────────┴─────────────────────┤
+│ Status Bar (language, file path, save state)                │
+└─────────────────────────────────────────────────────────────┘
+
+Major UI Components:
+- App.tsx — Central state container and layout orchestrator
+- FileTree.tsx — Recursive file/folder explorer with expand/collapse
+- EditorTabs.tsx — Multi-file tab management with unsaved indicator
+- Terminal.tsx — xterm.js wrapper with Electron PTY bridge
+- AIChat.tsx — Streaming chat interface with context injection and
+               "Insert at cursor" / "Replace selection" actions
+- app.css — Complete custom dark theme (VS Code inspired)
+
+State Management:
+- All state is local React state (useState/useRef/useMemo/useCallback).
+- No external state management library (Redux, Zustand, etc.).
+- Editor content, open tabs, active file, folder path, and AI messages
+  are managed at the App level and passed down via props.
+
+Key Features Implemented in Frontend:
+- Multi-tab editing with dirty state tracking
+- Ctrl+S global save handler
+- AI response streaming with live UI updates
+- Code block extraction from AI responses for safe insertion
+- Monaco worker configuration for TS/JS/JSON
+- Responsive layout using flexbox (no external UI framework)
+
+
+4. BACKEND ARCHITECTURE
+--------------------------------------------------------------------------------
+
+There is no traditional backend server. All server-side logic runs inside
+Electron's Main Process (Node.js environment).
+
+Main Process Entry:
+- src/index.ts — Contains all main-process logic
+
+Responsibilities of the Main Process:
+1. Application lifecycle (app.on('ready'), window-all-closed, activate)
+2. BrowserWindow creation with secure webPreferences:
+   - contextIsolation: true
+   - nodeIntegration: false
+3. IPC handlers registered via ipcMain.handle() / ipcMain.on()
+4. Native OS dialogs (folder picker)
+5. File system operations using Node fs/promises
+6. Recursive directory tree generation with sensible ignores
+7. Child process spawning for integrated terminal (PowerShell)
+8. Direct calls to Groq AI via the official SDK (no proxy)
+
+IPC Communication Pattern:
+Renderer (preload)  <—(invoke/send)→  Main Process (ipcMain)
+Main Process        —(send)→          Renderer (via webContents)
+
+All privileged operations (file access, spawning processes, calling AI APIs)
+are performed exclusively in the main process and exposed to the renderer
+through a narrow, audited API surface in preload.ts.
+
+Security Model:
+- Renderer has zero direct Node.js or filesystem access.
+- All capabilities are explicitly bridged via contextBridge.
+- Fuses are configured in forge.config.ts to further harden the packaged app.
+
+
+5. SYSTEM ARCHITECTURE
+--------------------------------------------------------------------------------
+
+High-Level Component Diagram:
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        Electron Application                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌──────────────────┐        ┌─────────────────────────────┐  │
+│   │  Main Process    │        │  Renderer Process (React)   │  │
+│   │  (Node.js)       │        │                             │  │
+│   │                  │        │  ┌─────────────────────┐    │  │
+│   │  • IPC Handlers  │◄──────►│  │   React UI Layer    │    │  │
+│   │  • File System   │  IPC   │  │   (app.tsx +        │    │  │
+│   │  • Dialogs       │        │  │    components)      │    │  │
+│   │  • Groq SDK      │        │  └─────────────────────┘    │  │
+│   │  • PowerShell    │        │                             │  │
+│   │    Spawner       │        │  Preload Script             │  │
+│   │                  │        │  (contextBridge)            │  │
+│   └──────────────────┘        └─────────────────────────────┘  │
+│                                                                 │
+│   External Services:                                            │
+│   • Groq API (https://api.groq.com)                             │
+│   • Local Filesystem (user-selected folders)                    │
+│   • PowerShell.exe (Windows shell)                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+Data Flow Examples:
+- User clicks "Open Folder" → dialog:openFolder → native dialog → returns path
+- User clicks file in tree → fs:readFile → returns content → Monaco editor
+- User sends chat message → ai:stream → Groq streaming → chunks pushed via
+  'ai:stream-chunk' events → AIChat component renders tokens live
+- User types in terminal → terminal:write → stdin of PowerShell child process
+
+The architecture follows Electron security best practices and keeps the
+attack surface small by using a strict preload bridge.
+
+
+6. DATABASE
+--------------------------------------------------------------------------------
+
+Orbit AI does not use any database.
+
+All persistent data lives on the user's local filesystem:
+- Source code files being edited
+- The opened project folder itself
+
+The only piece of application state that survives restarts is the Groq API
+key, which is stored in the browser's localStorage under the key
+'groq_api_key'.
+
+There are no SQLite, IndexedDB (beyond localStorage), or any other data
+storage layers.
+
+
+7. DATABASE SCHEMA
+--------------------------------------------------------------------------------
+
+N/A — No database is used in this project.
+
+
+8. API DOCUMENTATION
+--------------------------------------------------------------------------------
+
+Orbit AI exposes no public HTTP or REST API.
+
+All inter-process communication happens through a tightly-scoped Electron
+contextBridge API defined in src/preload.ts and exposed as
+window.electronAPI.
+
+Exposed API Surface (window.electronAPI):
+
+File System & Dialogs
+- openFolder(): Promise<string | null>
+- readFile(path: string): Promise<string>
+- writeFile(path: string, content: string): Promise<boolean>
+- createFile(path: string, content?: string): Promise<boolean>
+- createDirectory(path: string): Promise<boolean>
+- getFileTree(folderPath: string): Promise<FileNode[]>
+
+Terminal
+- terminalCreate(cwd?: string): Promise<{ pid: number }>
+- terminalWrite(data: string): void
+- terminalResize(cols: number, rows: number): void
+- onTerminalData(callback: (data: string) => void): void
+
+AI (Groq)
+- aiChat(apiKey: string, messages: Message[]): Promise<string>
+- aiStream(apiKey: string, messages: Message[]): Promise<string>
+- onStreamChunk(callback: (delta: string) => void): void
+
+FileNode interface:
+{
+  name: string;
+  type: 'file' | 'directory';
+  path: string;
+  children?: FileNode[];
+}
+
+AI Message format:
+{ role: 'system' | 'user' | 'assistant'; content: string }
+
+Note: Streaming is the primary AI interaction path used by the UI.
+The non-streaming aiChat handler exists but is not used in the current
+frontend implementation.
+
+
+9. AUTHENTICATION & AUTHORIZATION
+--------------------------------------------------------------------------------
+
+Application-Level Authentication:
+- None. The desktop application does not have users, accounts, or login.
+
+Authorization / Permissions:
+- The app runs with whatever permissions the user who launched it has on
+  their local machine.
+- Full read/write access to any folder the user explicitly opens via the
+  native dialog.
+
+Groq AI Authentication:
+- Users must provide their own Groq API key via the UI (🔑 button in chat).
+- The key is stored only in localStorage (never sent anywhere except directly
+  to Groq's API from the main process).
+- No key is bundled with the application.
+- Link to https://console.groq.com/keys is provided in the interface.
+
+There is no role-based access control, session management, or token refresh
+mechanism because none of these concepts apply to a single-user desktop tool.
+
+
+10. PROJECT FOLDER STRUCTURE
+--------------------------------------------------------------------------------
+
+Root directory (clean view — excludes node_modules, .webpack, out, dist, build,
+and .git internals):
+
+orbit-ai/
+├── src/
+│   ├── renderer/
+│   │   ├── AIChat.tsx          # AI chat panel with streaming + apply actions
+│   │   ├── app.css             # Complete dark IDE theme
+│   │   ├── app.tsx             # Main application shell and state
+│   │   ├── EditorTabs.tsx      # Multi-file tab bar component
+│   │   ├── FileTree.tsx        # Recursive file explorer
+│   │   ├── main.tsx            # React entry point
+│   │   └── Terminal.tsx        # xterm.js wrapper + Electron PTY bridge
+│   ├── index.html              # Minimal HTML shell
+│   ├── index.ts                # Electron Main Process (IPC + services)
+│   └── preload.ts              # Secure contextBridge API surface
+│
+├── .eslintrc.json              # ESLint configuration
+├── .gitignore
+├── forge.config.ts             # Electron Forge configuration + makers + fuses
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+│
+├── webpack.main.config.ts
+├── webpack.renderer.config.ts
+├── webpack.rules.ts
+├── webpack.plugins.ts
+│
+└── AboutProject.txt            # This file
+
+Important Notes on Structure:
+- All source code lives under src/.
+- Renderer-specific React code is isolated in src/renderer/.
+- Main process and preload files sit directly in src/ (standard Electron Forge
+  layout).
+- No separate "backend" or "frontend" folders — the split is between main
+  process (Node) and renderer process (React).
+
+
+11. CONFIGURATION MANAGEMENT
+--------------------------------------------------------------------------------
+
+Build & Packaging Configuration:
+- forge.config.ts — Central Electron Forge configuration
+  - Packager settings (asar: true)
+  - Makers: Squirrel (Windows), ZIP (macOS), Deb/RPM (Linux)
+  - Webpack plugin wiring main + renderer configs
+  - Security Fuses (V1) hardening the packaged binary
+
+Webpack Configuration (split across four files for maintainability):
+- webpack.main.config.ts — Entry point and basic config for main process
+- webpack.renderer.config.ts — Renderer-specific settings + CSS handling
+- webpack.rules.ts — Shared loaders (TypeScript, native modules, fonts, SVGs)
+- webpack.plugins.ts — ForkTsCheckerWebpackPlugin for type checking
+
+TypeScript Configuration:
+- tsconfig.json — ES2020 target, React JSX transform, strict mode enabled
+
+Linting:
+- .eslintrc.json — Extends recommended TypeScript + Electron + import rules
+
+Runtime Configuration (no files required):
+- Groq API Key — Provided at runtime through the UI and persisted in
+  localStorage. No .env file is read or required by the application.
+
+Environment Variables:
+- The application does not currently read any process.env variables for
+  configuration (except those inherited by the spawned PowerShell process).
+- The terminal spawner passes the full current environment to the child shell.
+
+Ignored Folders (hardcoded in main process):
+node_modules, .git, .webpack, dist, build, out, .next, coverage, .env*,
+logs, *.log, .DS_Store, Thumbs.db (see src/index.ts for full list)
+
+
+12. EXTERNAL INTEGRATIONS
+--------------------------------------------------------------------------------
+
+1. Groq AI (Primary AI Provider)
+   - Endpoint: https://api.groq.com (via groq-sdk)
+   - Models used:
+     • llama3-8b-8192 (non-streaming handler)
+     • llama-3.3-70b-versatile (streaming, primary chat model)
+   - Authentication: User-supplied API key sent directly from main process
+   - Data sent: Current file path + truncated file content (max ~8000 chars)
+                 as system prompt, plus conversation history
+   - Purpose: Real-time code assistance, explanations, and code generation
+
+2. Local Filesystem
+   - Full read/write/create access to any directory the user opens
+   - Recursive directory walking (depth-limited to 8 levels for safety)
+   - Used for: project browsing, editing, and saving files
+
+3. PowerShell (Windows Shell)
+   - Executable: powershell.exe
+   - Spawned via Node child_process.spawn
+   - Working directory defaults to user profile or the opened folder
+   - Full environment variables are inherited
+   - Used exclusively for the integrated terminal panel
+   - Note: Currently Windows-only (no macOS/Linux shell fallback)
+
+4. Monaco Editor Workers
+   - Loaded dynamically from monaco-editor package
+   - Provides language services for TypeScript, JavaScript, JSON, etc.
+
+No other third-party services, analytics, crash reporting, or update servers
+are integrated at this time.
+
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================

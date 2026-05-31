@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { spawn } from 'child_process';
+import * as pty from 'node-pty';
 import Groq from 'groq-sdk';
 interface FileNode {
   name: string;
@@ -12,6 +12,10 @@ interface FileNode {
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
+
+// --- Terminal state (node-pty) ---
+let ptyProcess: pty.IPty | null = null;
+let ptySender: Electron.WebContents | null = null;
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -113,31 +117,50 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
 });
 
 ipcMain.handle('terminal:create', (event, cwd?: string) => {
-  const shell = spawn('powershell.exe', [], {
-    cwd: cwd || process.env.HOME || process.env.USERPROFILE,
-    env: process.env as { [key: string]: string },
-    stdio: ['pipe', 'pipe', 'pipe'],
+  // Kill any existing pty before creating a new one (supports folder changes)
+  if (ptyProcess) {
+    ptyProcess.kill();
+    ptyProcess = null;
+  }
+
+  ptyProcess = pty.spawn('powershell.exe', ['-NoLogo', '-NoProfile'], {
+    name: 'xterm-256color',
+    cols: 80,
+    rows: 24,
+    cwd: cwd || process.env.USERPROFILE || process.env.HOME || process.cwd(),
+    env: process.env as any,
   });
 
-  shell.stdout.on('data', (data) => {
-    event.sender.send('terminal:data', data.toString());
-  });
-  shell.stderr.on('data', (data) => {
-    event.sender.send('terminal:data', data.toString());
-  });
-  shell.on('close', () => {
-    event.sender.send('terminal:data', '\r\n[Process exited]\r\n');
+  ptySender = event.sender;
+
+  ptyProcess.onData((data: string) => {
+    if (ptySender && !ptySender.isDestroyed()) {
+      ptySender.send('terminal:data', data);
+    }
   });
 
-  ipcMain.on('terminal:write', (_e, data: string) => {
-    shell.stdin.write(data);
+  ptyProcess.onExit(() => {
+    if (ptySender && !ptySender.isDestroyed()) {
+      ptySender.send('terminal:data', '\r\n[Process exited]\r\n');
+    }
+    ptyProcess = null;
+    ptySender = null;
   });
 
-  ipcMain.on('terminal:resize', (_e, { cols, rows }) => {
-    // resize not supported in spawn, but kept for compatibility
-  });
+  return { pid: ptyProcess.pid };
+});
 
-  return { pid: shell.pid };
+// Register terminal I/O listeners exactly once (not inside create handler)
+ipcMain.on('terminal:write', (_e, data: string) => {
+  if (ptyProcess) {
+    ptyProcess.write(data);
+  }
+});
+
+ipcMain.on('terminal:resize', (_e, { cols, rows }: { cols: number; rows: number }) => {
+  if (ptyProcess) {
+    ptyProcess.resize(cols, rows);
+  }
 });
 
 ipcMain.handle('ai:chat', async (_event, { apiKey, messages }: { apiKey: string; messages: { role: string; content: string }[] }) => {

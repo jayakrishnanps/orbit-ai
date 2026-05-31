@@ -7,11 +7,24 @@ export default function TerminalPanel({ folderPath }: { folderPath?: string | nu
   const divRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const term = new Terminal({ cursorBlink: true, theme: { background: '#1e1e1e' } });
+    const term = new Terminal({
+      cursorBlink: true,
+      theme: { background: '#1e1e1e' },
+      scrollback: 2000,
+      convertEol: true,
+      fontSize: 14,
+      fontFamily: 'Consolas, "Courier New", Menlo, monospace',
+      allowTransparency: false,
+      windowsPty: {
+        backend: 'conpty',
+        buildNumber: 19000,
+      },
+    });
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(divRef.current!);
     fitAddon.fit();
+    term.focus();   // Critical: give xterm keyboard focus so keys reach the PTY
 
     (window as any).electronAPI.terminalCreate(folderPath ?? undefined);
 
