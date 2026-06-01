@@ -17,14 +17,16 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
   const [showKey, setShowKey]     = useState(!localStorage.getItem('groq_api_key'));
   const [messages, setMessages]   = useState<Message[]>([]);
   const [input, setInput]         = useState('');
-  const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const chunkHandlerRef = useRef<((delta: string) => void) | null>(null);
 
+  const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; content: string }>>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages]);
 
   // Register stream listener ONCE (prevents accumulation of ipc handlers on every send).
   // Per-message chunkHandler is swapped via ref. Cleanup on unmount follows remove pattern.
@@ -48,22 +50,50 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
   };
 
   const sendMessage = async () => {
-    if (!apiKey || !input.trim()) return;
+    if (!apiKey) return;
+    if (!input.trim() && attachedFiles.length === 0) return;
 
     const userMessage = input.trim();
     const newHistory = [...messages, { role: 'user' as const, content: userMessage }];
     setMessages(newHistory);
     setInput(''); // clear input immediately
 
-    let systemPrompt = 'You are Orbit AI, an expert coding assistant.';
+    let systemPrompt = `You are Orbit AI, an expert coding assistant.
+
+When the user asks you to modify, improve, comment, refactor, or change code in any way, you MUST follow this exact rule:
+
+1. Write ONE short sentence explaining what you will do.
+2. Then output the **ENTIRE modified file** inside one markdown code block. Use the correct language tag (e.g. \`\`\`javascript).
+
+Do not output any explanation, reasoning, or text after the code block.
+Do not output partial snippets — always output the full file content.
+
+Example:
+User: "add many comments as possible"
+Correct response:
+I'll add detailed comments throughout the file for better readability.
+\`\`\`javascript
+// full file content with comments here
+\`\`\`
+
+If the user is not asking to change code, respond normally with text.`;
+
     if (folderPath) {
       try {
         const tree = await (window as any).electronAPI.getFileTree(folderPath);
-        systemPrompt += `\n\nProject tree:\n` + JSON.stringify(tree).slice(0, 4000);
+        systemPrompt += `\n\nProject tree:\n` + JSON.stringify(tree).slice(0, 3500);
       } catch {}
     }
+
     if (currentFile) {
-      systemPrompt += `\n\nCurrent file: ${currentFile}\n\`\`\`\n${currentCode.slice(0, 4000)}\n\`\`\``;
+      systemPrompt += `\n\nCurrent open file: ${currentFile}\n\`\`\`\n${currentCode.slice(0, 3500)}\n\`\`\``;
+    }
+
+    if (attachedFiles.length > 0) {
+      systemPrompt += `\n\n=== USER-ATTACHED FILES (HIGHEST PRIORITY) ===`;
+      for (const f of attachedFiles) {
+        systemPrompt += `\n\n--- ${f.name} ---\n${f.content.slice(0, 3000)}`;
+      }
     }
 
     const fullMessages = [{ role: 'system' as const, content: systemPrompt }, ...newHistory];
@@ -74,14 +104,14 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
 
     const chunkHandler = (delta: string) => {
       assistantMessage += delta;
+      const cleanForDisplay = assistantMessage.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1].content = assistantMessage;
+        updated[updated.length - 1].content = cleanForDisplay;
         return updated;
       });
     };
 
-    // Assign to ref instead of re-registering listener every send (see mount useEffect)
     chunkHandlerRef.current = chunkHandler;
 
     try {
@@ -89,16 +119,38 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
     } finally {
       chunkHandlerRef.current = null;
 
-      // Auto-apply the first code block from the AI response (user requested "it should do it by itself")
-      if (currentFile && assistantMessage) {
-        const codeBlockMatch = assistantMessage.match(/```(?:\w+)?\s*\n([\s\S]*?)\n```/i)
-          || assistantMessage.match(/```([\s\S]*?)```/i);
-        if (codeBlockMatch) {
-          const code = codeBlockMatch[1].trim();
-          // Automatically insert the suggested code at the current cursor position
-          onApplyCode(code, 'insert');
+      const raw = assistantMessage.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
+
+      // Extract first code block content (the entire new file)
+      const codeBlockMatch = raw.match(/```(?:\w+)?\n([\s\S]*?)```/);
+      const extractedCode = codeBlockMatch ? codeBlockMatch[1] : null;
+
+      let displayMessage = raw;
+
+      if (currentFile) {
+        if (extractedCode) {
+          // Full file rewrite path - the most reliable method
+          const result = onApplyCode(extractedCode, 'replace');
+
+          const fileName = currentFile.split(/[/\\]/).pop();
+          displayMessage = result?.success 
+            ? `Done. I've updated ${fileName} with the requested changes.`
+            : `I tried to update ${fileName}, but the changes could not be applied.`;
+        } else {
+          // No code block found — model did not follow instructions
+          displayMessage = `I couldn't find a code block in the response. Please try again and ask me to edit the file.`;
         }
       }
+
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0) {
+          updated[updated.length - 1].content = displayMessage;
+        }
+        return updated;
+      });
+
+      setAttachedFiles([]);
     }
   };
 
@@ -107,6 +159,49 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const newAttachments: Array<{ name: string; content: string }> = [];
+
+    if (files.length > 0) {
+      for (const file of files.slice(0, 4)) {
+        try {
+          const content = await file.text();
+          newAttachments.push({ name: file.name, content });
+        } catch (err) {
+          console.warn('Could not read dropped file:', file.name);
+        }
+      }
+    } else if (currentFile && currentCode) {
+      const fileName = currentFile.split(/[/\\]/).pop() || currentFile;
+      newAttachments.push({ name: fileName, content: currentCode });
+    }
+
+    if (newAttachments.length > 0) {
+      setAttachedFiles(prev => [...prev, ...newAttachments].slice(0, 4));
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -147,52 +242,93 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
       )}
 
       {/* Context badge */}
-      {currentFile && (
+      {(currentFile || attachedFiles.length > 0) && (
         <div className="chat-context">
-          📄 {currentFile.split(/[/\\]/).pop()}
+          {currentFile && `📄 ${currentFile.split(/[/\\]/).pop()}`}
+          {attachedFiles.length > 0 && `  + ${attachedFiles.length} attached file(s)`}
         </div>
       )}
 
       {/* Messages */}
       <div className="chat-messages">
-        {messages.length === 0 && !loading && (
+        {messages.length === 0 && (
           <div className="chat-empty">
             Ask anything about your code.<br />
-            {currentFile ? 'Context: current file is included.' : 'Open a file for context.'}
+            {currentFile ? 'The AI will think step-by-step then automatically apply minimal edits.' : 'Open a file for context.'}
           </div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={`chat-msg chat-msg--${m.role}`}>
             <span className="chat-msg__label">{m.role === 'user' ? 'You' : 'Orbit AI'}</span>
             <pre className="chat-msg__content">{m.content}</pre>
-            {/* Buttons removed per user request - AI now automatically applies the first code block it suggests (see sendMessage) */}
           </div>
         ))}
-        {loading && (
-          <div className="chat-msg chat-msg--assistant">
-            <span className="chat-msg__label">Orbit AI</span>
-            <span className="chat-typing">●●●</span>
-          </div>
-        )}
         {error && <div className="chat-error">{error}</div>}
         <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <div className="chat-input-row">
+      <div 
+        className="chat-input-row"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        style={{ 
+          position: 'relative',
+          border: isDragging ? '2px dashed #4a9eff' : '1px solid #333',
+          background: isDragging ? '#1a2533' : '#1e1e1e',
+          transition: 'all 0.1s ease',
+          borderRadius: '6px'
+        }}
+      >
+        {attachedFiles.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '6px', 
+            marginBottom: '6px',
+            padding: '4px 8px',
+            background: '#2a2a2a',
+            borderRadius: '6px'
+          }}>
+            {attachedFiles.map((file, idx) => (
+              <div key={idx} style={{
+                background: '#3c3c3c',
+                color: '#ddd',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                📎 {file.name}
+                <button 
+                  onClick={() => removeAttachment(idx)}
+                  style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '14px' }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <div style={{ fontSize: '11px', color: '#888', alignSelf: 'center', marginLeft: '4px' }}>
+              (drag files from explorer)
+            </div>
+          </div>
+        )}
+
         <textarea
           className="chat-input"
           rows={2}
-          placeholder="Ask about your code… (Enter to send, Shift+Enter for newline)"
+          placeholder="Ask about your code… (Drag files from your computer here for extra context)"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={loading}
         />
         <button
           className="chat-send"
           onClick={sendMessage}
-          disabled={loading || !input.trim()}
+          disabled={!input.trim() && attachedFiles.length === 0}
         >
           ↑
         </button>

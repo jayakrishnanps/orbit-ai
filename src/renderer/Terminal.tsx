@@ -41,13 +41,10 @@ export default function TerminalPanel({ folderPath }: { folderPath?: string | nu
     });
     if (divRef.current) observer.observe(divRef.current);
 
-    // Give the layout one frame to compute real size, then fit + tell PTY the real dimensions, then start shell.
-    // For very large folders this helps the shell start with correct size instead of a tiny viewport.
     requestAnimationFrame(() => {
       if (divRef.current) {
         fitAddon.fit();
         const { cols, rows } = term;
-        // Only send resize if we have a reasonable size (prevents starting shell in 1x1 or 0x0)
         if (cols > 4 && rows > 4) {
           (window as any).electronAPI.terminalResize(cols, rows);
         }
@@ -57,8 +54,6 @@ export default function TerminalPanel({ folderPath }: { folderPath?: string | nu
         try {
           await (window as any).electronAPI.terminalCreate(folderPath ?? undefined);
 
-          // Extra safety resize ~300ms after spawn. Helps when opening very large folders
-          // where the first layout measurement was still settling.
           setTimeout(() => {
             if (divRef.current) {
               fitAddon.fit();

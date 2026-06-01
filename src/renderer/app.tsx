@@ -38,7 +38,6 @@ declare global {
       terminalWrite: (data: string) => void;
       terminalResize: (cols: number, rows: number) => void;
       onTerminalData: (cb: (data: string) => void) => void;
-      aiChat: (apiKey: string, messages: { role: string; content: string }[]) => Promise<string>;
     };
   }
 }
@@ -77,16 +76,12 @@ function App() {
     const selected = await window.electronAPI.openFolder();
     if (!selected) return;
 
-    // Guard against accidentally opening node_modules or other pathological folders as the project root.
     const baseName = selected.split(/[/\\]/).pop()?.toLowerCase() || '';
     if (baseName === 'node_modules' || baseName === '.git') {
       alert(`It is not recommended to open "${baseName}" as a project folder. The file tree and terminal will be very slow or empty. Please choose the actual project root instead.`);
       return;
     }
 
-    // Load the full tree first (can be slow on huge folders with many files).
-    // Only update folderPath (which restarts the terminal) after the tree is ready.
-    // This prevents the terminal from going blank while the main process is busy walking a large directory.
     const tree = await window.electronAPI.getFileTree(selected);
     setFileTree(tree);
     setFolderPath(selected);
@@ -137,35 +132,56 @@ function App() {
 
   const applyToEditor = useCallback((aiCode: string, mode: 'insert' | 'replace') => {
     if (!editorRef.current) {
-      console.warn('No editor open. Open a file first to use Insert/Replace.');
-      return;
+      return { success: false, reason: 'no-editor' };
     }
+
     const editor = editorRef.current;
     const selection = editor.getSelection();
 
-    // Improved extraction supporting optional language, flexible whitespace/newlines
-    let cleanedCode = aiCode;
-    const codeBlockMatch = aiCode.match(/```(?:\w+)?\s*\n([\s\S]*?)\n```/i) || aiCode.match(/```([\s\S]*?)```/i);
-    if (codeBlockMatch) {
-      cleanedCode = codeBlockMatch[1].trim();
-    } else {
-      cleanedCode = aiCode.trim();
+    if (typeof aiCode === 'string' && !aiCode.startsWith('{') && !aiCode.includes('EDIT:')) {
+      const model = editor.getModel();
+      if (model) {
+        model.setValue(aiCode);
+        saveFile();
+        return { success: true };
+      }
+      return { success: false, reason: 'no-model' };
     }
 
-    let editRange;
-    if (mode === 'replace' && selection) {
-      editRange = selection;
-    } else {
-      const position = editor.getPosition() || { lineNumber: 1, column: 1 };
-      editRange = {
-        startLineNumber: position.lineNumber,
-        startColumn: position.column,
-        endLineNumber: position.lineNumber,
-        endColumn: position.column
-      };
+    if (typeof aiCode === 'string' && aiCode.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(aiCode);
+        if (parsed.type === 'precise-replace' && parsed.find && parsed.replace) {
+          const model = editor.getModel();
+          const fullText = model.getValue();
+          let newText = fullText.replace(parsed.find, parsed.replace);
+
+          if (newText === fullText) {
+            const trimmedFind = parsed.find.trim();
+            const trimmedReplace = parsed.replace.trim();
+            newText = fullText.replace(trimmedFind, trimmedReplace);
+          }
+
+          if (newText !== fullText) {
+            const lastLine = model.getLineCount();
+            const lastColumn = model.getLineMaxColumn(lastLine);
+            editor.executeEdits('ai-apply', [{
+              range: { startLineNumber: 1, startColumn: 1, endLineNumber: lastLine, endColumn: lastColumn },
+              text: newText
+            }]);
+            saveFile();
+            return { success: true };
+          }
+          return { success: false, reason: 'find-not-found' };
+        }
+      } catch (e) {
+        // fall through
+      }
     }
-    editor.executeEdits('ai-apply', [{ range: editRange, text: cleanedCode }]);
-    saveFile();
+
+    const fileName = currentFile ? currentFile.split(/[/\\]/).pop() : 'file';
+    console.warn(`Legacy edit path used for ${fileName}.`);
+    return { success: false, reason: 'legacy-path-used' };
   }, [currentFile, editorRef]);
 
   // Global save handler

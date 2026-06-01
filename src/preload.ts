@@ -11,8 +11,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   terminalWrite: (data: string) => ipcRenderer.send('terminal:write', data),
   terminalResize: (cols: number, rows: number) => ipcRenderer.send('terminal:resize', { cols, rows }),
   onTerminalData: (cb: (data: string) => void) => ipcRenderer.on('terminal:data', (_e, data) => cb(data)),
-  aiChat: (apiKey: string, messages: { role: string; content: string }[]) =>
-    ipcRenderer.invoke('ai:chat', { apiKey, messages }),
   aiStream: (apiKey: string, messages: any[]) =>
     ipcRenderer.invoke('ai:stream', { apiKey, messages }),
 

@@ -90,7 +90,7 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
   ]);
 
   async function getTree(dir: string, depth = 0): Promise<FileNode[]> {
-    if (depth > 6) return [];                    // tighter safety limit for huge folders
+    if (depth > 6) return [];
 
     let entries: any[] = [];
     try {
@@ -99,7 +99,6 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
       return [];
     }
 
-    // Extra protection: if someone opens node_modules or a folder with 2000+ entries at one level, bail early
     if (entries.length > 1200) {
       return [{
         name: '(folder too large - ' + entries.length + ' entries, truncated)',
@@ -138,7 +137,6 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
 });
 
 ipcMain.handle('terminal:create', async (event, cwd?: string) => {
-  // Silent destroy previous PTY for folder changes (no exit banner)
   if (ptyProcess) {
     suppressExitMessage = true;
     try { ptyProcess.kill(); } catch {}
@@ -206,7 +204,6 @@ ipcMain.on('terminal:resize', (_e, { cols, rows }: { cols: number; rows: number 
   }
 });
 
-// NEW handler (for explicit cleanup from renderer)
 ipcMain.on('terminal:destroy', () => {
   if (ptyProcess) {
     suppressExitMessage = true;
@@ -214,15 +211,6 @@ ipcMain.on('terminal:destroy', () => {
     ptyProcess = null;
     ptySender = null;
   }
-});
-
-ipcMain.handle('ai:chat', async (_event, { apiKey, messages }: { apiKey: string; messages: { role: string; content: string }[] }) => {
-  const groq = new Groq({ apiKey });
-  const completion = await groq.chat.completions.create({
-    model: 'llama3-8b-8192',
-    messages: messages as Groq.Chat.ChatCompletionMessageParam[],
-  });
-  return completion.choices[0]?.message?.content ?? '';
 });
 
 ipcMain.handle('ai:stream', async (event, { apiKey, messages }) => {
