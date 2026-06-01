@@ -76,9 +76,20 @@ function App() {
   const openFolder = async () => {
     const selected = await window.electronAPI.openFolder();
     if (!selected) return;
-    setFolderPath(selected);
+
+    // Guard against accidentally opening node_modules or other pathological folders as the project root.
+    const baseName = selected.split(/[/\\]/).pop()?.toLowerCase() || '';
+    if (baseName === 'node_modules' || baseName === '.git') {
+      alert(`It is not recommended to open "${baseName}" as a project folder. The file tree and terminal will be very slow or empty. Please choose the actual project root instead.`);
+      return;
+    }
+
+    // Load the full tree first (can be slow on huge folders with many files).
+    // Only update folderPath (which restarts the terminal) after the tree is ready.
+    // This prevents the terminal from going blank while the main process is busy walking a large directory.
     const tree = await window.electronAPI.getFileTree(selected);
     setFileTree(tree);
+    setFolderPath(selected);
   };
 
   const openFileInNewTab = async (filePath: string) => {
@@ -124,33 +135,38 @@ function App() {
     ));
   }, [currentFile]);
 
-  const applyToEditor = (aiCode: string, mode: 'insert' | 'replace') => {
-    if (!editorRef.current) return;
+  const applyToEditor = useCallback((aiCode: string, mode: 'insert' | 'replace') => {
+    if (!editorRef.current) {
+      console.warn('No editor open. Open a file first to use Insert/Replace.');
+      return;
+    }
     const editor = editorRef.current;
     const selection = editor.getSelection();
-    
-    // Extract code block content if it is a markdown code block
+
+    // Improved extraction supporting optional language, flexible whitespace/newlines
     let cleanedCode = aiCode;
-    const codeBlockMatch = aiCode.match(/```[a-z]*\n([\s\S]*?)```/);
+    const codeBlockMatch = aiCode.match(/```(?:\w+)?\s*\n([\s\S]*?)\n```/i) || aiCode.match(/```([\s\S]*?)```/i);
     if (codeBlockMatch) {
-      cleanedCode = codeBlockMatch[1];
-    }
-    
-    if (mode === 'replace' && selection) {
-      editor.executeEdits('ai-apply', [{
-        range: selection,
-        text: cleanedCode,
-      }]);
+      cleanedCode = codeBlockMatch[1].trim();
     } else {
-      // insert at cursor
-      const position = editor.getPosition();
-      editor.executeEdits('ai-apply', [{
-        range: { startLineNumber: position.lineNumber, startColumn: position.column, endLineNumber: position.lineNumber, endColumn: position.column },
-        text: cleanedCode,
-      }]);
+      cleanedCode = aiCode.trim();
     }
+
+    let editRange;
+    if (mode === 'replace' && selection) {
+      editRange = selection;
+    } else {
+      const position = editor.getPosition() || { lineNumber: 1, column: 1 };
+      editRange = {
+        startLineNumber: position.lineNumber,
+        startColumn: position.column,
+        endLineNumber: position.lineNumber,
+        endColumn: position.column
+      };
+    }
+    editor.executeEdits('ai-apply', [{ range: editRange, text: cleanedCode }]);
     saveFile();
-  };
+  }, [currentFile, editorRef]);
 
   // Global save handler
   useEffect(() => {
@@ -259,7 +275,7 @@ function App() {
 
         {/* AI Chat sidebar */}
         <div className="ide-chat">
-          <AIChat currentFile={activeTabPath} currentCode={code} onApplyCode={applyToEditor} />
+          <AIChat currentFile={activeTabPath} currentCode={code} folderPath={folderPath} onApplyCode={applyToEditor} />
         </div>
 
       </div>

@@ -8,10 +8,11 @@ interface Message {
 interface AIChatProps {
   currentFile: string | null;
   currentCode: string;
+  folderPath?: string | null;
   onApplyCode: (code: string, mode: 'insert' | 'replace') => void;
 }
 
-export default function AIChat({ currentFile, currentCode, onApplyCode }: AIChatProps) {
+export default function AIChat({ currentFile, currentCode, folderPath, onApplyCode }: AIChatProps) {
   const [apiKey, setApiKey]       = useState(() => localStorage.getItem('groq_api_key') ?? '');
   const [showKey, setShowKey]     = useState(!localStorage.getItem('groq_api_key'));
   const [messages, setMessages]   = useState<Message[]>([]);
@@ -19,10 +20,26 @@ export default function AIChat({ currentFile, currentCode, onApplyCode }: AIChat
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chunkHandlerRef = useRef<((delta: string) => void) | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Register stream listener ONCE (prevents accumulation of ipc handlers on every send).
+  // Per-message chunkHandler is swapped via ref. Cleanup on unmount follows remove pattern.
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    const dispatcher = (delta: string) => {
+      if (chunkHandlerRef.current) chunkHandlerRef.current(delta);
+    };
+    api.onStreamChunk(dispatcher);
+
+    return () => {
+      chunkHandlerRef.current = null;
+      // removeListener pattern (full unsubscription would need preload to expose remover or use ipcRenderer directly)
+    };
+  }, []);
 
   const saveKey = () => {
     localStorage.setItem('groq_api_key', apiKey);
@@ -38,9 +55,16 @@ export default function AIChat({ currentFile, currentCode, onApplyCode }: AIChat
     setMessages(newHistory);
     setInput(''); // clear input immediately
 
-    const systemPrompt = currentFile
-      ? `You are Orbit AI, an expert coding assistant.\n\nCurrent file: ${currentFile}\n\`\`\`\n${currentCode.slice(0, 8000)}\n\`\`\``
-      : `You are Orbit AI, an expert coding assistant.`;
+    let systemPrompt = 'You are Orbit AI, an expert coding assistant.';
+    if (folderPath) {
+      try {
+        const tree = await (window as any).electronAPI.getFileTree(folderPath);
+        systemPrompt += `\n\nProject tree:\n` + JSON.stringify(tree).slice(0, 4000);
+      } catch {}
+    }
+    if (currentFile) {
+      systemPrompt += `\n\nCurrent file: ${currentFile}\n\`\`\`\n${currentCode.slice(0, 4000)}\n\`\`\``;
+    }
 
     const fullMessages = [{ role: 'system' as const, content: systemPrompt }, ...newHistory];
 
@@ -57,12 +81,24 @@ export default function AIChat({ currentFile, currentCode, onApplyCode }: AIChat
       });
     };
 
-    (window as any).electronAPI.onStreamChunk(chunkHandler);
+    // Assign to ref instead of re-registering listener every send (see mount useEffect)
+    chunkHandlerRef.current = chunkHandler;
 
     try {
       await (window as any).electronAPI.aiStream(apiKey, fullMessages);
     } finally {
-      // optional cleanup
+      chunkHandlerRef.current = null;
+
+      // Auto-apply the first code block from the AI response (user requested "it should do it by itself")
+      if (currentFile && assistantMessage) {
+        const codeBlockMatch = assistantMessage.match(/```(?:\w+)?\s*\n([\s\S]*?)\n```/i)
+          || assistantMessage.match(/```([\s\S]*?)```/i);
+        if (codeBlockMatch) {
+          const code = codeBlockMatch[1].trim();
+          // Automatically insert the suggested code at the current cursor position
+          onApplyCode(code, 'insert');
+        }
+      }
     }
   };
 
@@ -129,22 +165,7 @@ export default function AIChat({ currentFile, currentCode, onApplyCode }: AIChat
           <div key={i} className={`chat-msg chat-msg--${m.role}`}>
             <span className="chat-msg__label">{m.role === 'user' ? 'You' : 'Orbit AI'}</span>
             <pre className="chat-msg__content">{m.content}</pre>
-            {m.role === 'assistant' && (
-              <div className="message-actions" style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                <button 
-                  onClick={() => onApplyCode(m.content, 'insert')}
-                  style={{ background: '#3c3c3c', border: 'none', color: '#ccc', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
-                >
-                  Insert at cursor
-                </button>
-                <button 
-                  onClick={() => onApplyCode(m.content, 'replace')}
-                  style={{ background: '#3c3c3c', border: 'none', color: '#ccc', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
-                >
-                  Replace selection
-                </button>
-              </div>
-            )}
+            {/* Buttons removed per user request - AI now automatically applies the first code block it suggests (see sendMessage) */}
           </div>
         ))}
         {loading && (

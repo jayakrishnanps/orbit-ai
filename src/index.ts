@@ -15,6 +15,7 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 let ptyProcess: ptyType.IPty | null = null;
 let ptySender: Electron.WebContents | null = null;
+let suppressExitMessage = false;   // NEW
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -78,19 +79,40 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
     '.env',
     '.env.local',
     'logs',
-    '*.log',
+    '.log',
     '.DS_Store',
     'Thumbs.db',
+    'target',
+    'vendor',
+    '.turbo',
+    '.vercel',
+    '.cache',
   ]);
 
   async function getTree(dir: string, depth = 0): Promise<FileNode[]> {
-    if (depth > 8) return [];                    // safety limit
+    if (depth > 6) return [];                    // tighter safety limit for huge folders
 
-    const entries = await fs.readdir(dir, { withFileTypes: true });
+    let entries: any[] = [];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+
+    // Extra protection: if someone opens node_modules or a folder with 2000+ entries at one level, bail early
+    if (entries.length > 1200) {
+      return [{
+        name: '(folder too large - ' + entries.length + ' entries, truncated)',
+        type: 'directory',
+        path: dir,
+        children: []
+      }];
+    }
+
     const tree: FileNode[] = [];
 
     for (const entry of entries) {
-      if (ignored.has(entry.name)) continue;     // skip heavy folders
+      if (ignored.has(entry.name)) continue;
 
       const fullPath = path.join(dir, entry.name);
 
@@ -99,7 +121,7 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
           name: entry.name,
           type: 'directory',
           path: fullPath,
-          children: await getTree(fullPath, depth + 1),   // recursive but limited
+          children: await getTree(fullPath, depth + 1),
         });
       } else {
         tree.push({
@@ -115,17 +137,19 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
   return getTree(folderPath);
 });
 
-ipcMain.handle('terminal:create', (event, cwd?: string) => {
-  // Kill previous PTY if exists (for folder changes)
+ipcMain.handle('terminal:create', async (event, cwd?: string) => {
+  // Silent destroy previous PTY for folder changes (no exit banner)
   if (ptyProcess) {
+    suppressExitMessage = true;
     try { ptyProcess.kill(); } catch {}
     ptyProcess = null;
+    ptySender = null;
   }
+
+  const targetCwd = cwd || process.env.USERPROFILE || process.env.HOME || process.cwd();
 
   // Use runtime require (node-pty is marked external in webpack)
   const pty = require('node-pty') as typeof ptyType;
-
-  const targetCwd = cwd || process.env.USERPROFILE || process.env.HOME || process.cwd();
 
   try {
     ptyProcess = pty.spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass'], {
@@ -135,25 +159,29 @@ ipcMain.handle('terminal:create', (event, cwd?: string) => {
       cwd: targetCwd,
       env: process.env as any,
     });
-  } catch (err: any) {
-    const msg = `\r\n[Failed to start terminal in "${targetCwd}"]\r\n${err?.message || err}\r\n\r\n`;
-    if (event.sender && !event.sender.isDestroyed()) {
-      event.sender.send('terminal:data', msg);
-    }
+  } catch (err) {
+    console.error('PTY spawn failed:', err);
     ptyProcess = null;
     ptySender = null;
-    throw err; // still surface to the renderer as remote method error
+    throw err;
   }
 
   ptySender = event.sender;
 
-  ptyProcess.onData((data: string) => {
+  ptyProcess.onData((data) => {
     if (ptySender && !ptySender.isDestroyed()) {
       ptySender.send('terminal:data', data);
     }
   });
 
   ptyProcess.onExit((e: { exitCode: number; signal?: number }) => {
+    if (suppressExitMessage) {
+      suppressExitMessage = false;
+      ptyProcess = null;
+      ptySender = null;
+      return;   // NO exit banner for intentional restarts
+    }
+
     if (ptySender && !ptySender.isDestroyed()) {
       const reason = e.exitCode !== 0 ? ` (exit code ${e.exitCode})` : '';
       ptySender.send('terminal:data', `\r\n[Process exited${reason}]\r\n`);
@@ -175,6 +203,16 @@ ipcMain.on('terminal:write', (_e, data: string) => {
 ipcMain.on('terminal:resize', (_e, { cols, rows }: { cols: number; rows: number }) => {
   if (ptyProcess) {
     ptyProcess.resize(cols, rows);
+  }
+});
+
+// NEW handler (for explicit cleanup from renderer)
+ipcMain.on('terminal:destroy', () => {
+  if (ptyProcess) {
+    suppressExitMessage = true;
+    try { ptyProcess.kill(); } catch {}
+    ptyProcess = null;
+    ptySender = null;
   }
 });
 
