@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import * as pty from 'node-pty';
+import type * as ptyType from 'node-pty';
 import Groq from 'groq-sdk';
 interface FileNode {
   name: string;
@@ -13,8 +13,7 @@ interface FileNode {
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
-// --- Terminal state (node-pty) ---
-let ptyProcess: pty.IPty | null = null;
+let ptyProcess: ptyType.IPty | null = null;
 let ptySender: Electron.WebContents | null = null;
 
 if (require('electron-squirrel-startup')) {
@@ -117,19 +116,34 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
 });
 
 ipcMain.handle('terminal:create', (event, cwd?: string) => {
-  // Kill any existing pty before creating a new one (supports folder changes)
+  // Kill previous PTY if exists (for folder changes)
   if (ptyProcess) {
-    ptyProcess.kill();
+    try { ptyProcess.kill(); } catch {}
     ptyProcess = null;
   }
 
-  ptyProcess = pty.spawn('powershell.exe', ['-NoLogo', '-NoProfile'], {
-    name: 'xterm-256color',
-    cols: 80,
-    rows: 24,
-    cwd: cwd || process.env.USERPROFILE || process.env.HOME || process.cwd(),
-    env: process.env as any,
-  });
+  // Use runtime require (node-pty is marked external in webpack)
+  const pty = require('node-pty') as typeof ptyType;
+
+  const targetCwd = cwd || process.env.USERPROFILE || process.env.HOME || process.cwd();
+
+  try {
+    ptyProcess = pty.spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass'], {
+      name: 'xterm-256color',
+      cols: 80,
+      rows: 24,
+      cwd: targetCwd,
+      env: process.env as any,
+    });
+  } catch (err: any) {
+    const msg = `\r\n[Failed to start terminal in "${targetCwd}"]\r\n${err?.message || err}\r\n\r\n`;
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.send('terminal:data', msg);
+    }
+    ptyProcess = null;
+    ptySender = null;
+    throw err; // still surface to the renderer as remote method error
+  }
 
   ptySender = event.sender;
 
@@ -139,9 +153,10 @@ ipcMain.handle('terminal:create', (event, cwd?: string) => {
     }
   });
 
-  ptyProcess.onExit(() => {
+  ptyProcess.onExit((e: { exitCode: number; signal?: number }) => {
     if (ptySender && !ptySender.isDestroyed()) {
-      ptySender.send('terminal:data', '\r\n[Process exited]\r\n');
+      const reason = e.exitCode !== 0 ? ` (exit code ${e.exitCode})` : '';
+      ptySender.send('terminal:data', `\r\n[Process exited${reason}]\r\n`);
     }
     ptyProcess = null;
     ptySender = null;
@@ -150,7 +165,7 @@ ipcMain.handle('terminal:create', (event, cwd?: string) => {
   return { pid: ptyProcess.pid };
 });
 
-// Register terminal I/O listeners exactly once (not inside create handler)
+// Terminal I/O listeners (registered once)
 ipcMain.on('terminal:write', (_e, data: string) => {
   if (ptyProcess) {
     ptyProcess.write(data);

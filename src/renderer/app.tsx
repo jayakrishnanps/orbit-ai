@@ -7,7 +7,6 @@ import { FileTree, FileNode } from './FileTree';
 import AIChat from './AIChat';
 import EditorTabs from './EditorTabs';
 
-// ── Monaco worker setup ──────────────────────────────────────────────────────
 (self as any).MonacoEnvironment = {
   getWorker(_moduleId: string, label: string) {
     if (label === 'json') {
@@ -28,7 +27,6 @@ import EditorTabs from './EditorTabs';
 
 loader.config({ monaco });
 
-// ── Global type augmentation ──────────────────────────────────────────────────
 declare global {
   interface Window {
     electronAPI: {
@@ -45,7 +43,6 @@ declare global {
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const EXT_LANGUAGE: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript',
   js: 'javascript', jsx: 'javascript',
@@ -63,7 +60,6 @@ function basename(filePath: string): string {
   return filePath.split(/[/\\]/).pop() ?? filePath;
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
 function App() {
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [fileTree, setFileTree]     = useState<FileNode[]>([]);
@@ -156,7 +152,7 @@ function App() {
     saveFile();
   };
 
-  // Ctrl+S global save
+  // Global save handler
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 's') {
@@ -174,7 +170,7 @@ function App() {
   return (
     <div className="ide-shell">
 
-      {/* ── Title bar ── */}
+      {/* Title bar */}
       <div className="ide-titlebar">
         <span className="ide-titlebar__title">
           Orbit AI{folderName ? ` — ${folderName}` : ''}
@@ -186,12 +182,12 @@ function App() {
 
       <div className="ide-body">
 
-        {/* ── Activity bar ── */}
+        {/* Activity bar */}
         <div className="ide-activity">
           <div className="ide-activity__icon" title="Explorer">📁</div>
         </div>
 
-        {/* ── Sidebar / File Explorer ── */}
+        {/* Sidebar / File Explorer */}
         <div className="ide-sidebar">
           <div className="ide-sidebar__header">Explorer</div>
           {folderName && (
@@ -212,7 +208,7 @@ function App() {
           </div>
         </div>
 
-        {/* ── Editor + Terminal column ── */}
+        {/* Editor + Terminal column */}
         <div className="ide-editor">
 
           {/* Tab bar */}
@@ -261,14 +257,14 @@ function App() {
 
         </div>
 
-        {/* ── AI Chat sidebar ── */}
+        {/* AI Chat sidebar */}
         <div className="ide-chat">
           <AIChat currentFile={activeTabPath} currentCode={code} onApplyCode={applyToEditor} />
         </div>
 
       </div>
 
-      {/* ── Status bar ── */}
+      {/* Status bar */}
       <div className="ide-statusbar">
         <span>{saved ? 'Saved' : '● Unsaved changes'}</span>
         <span>{currentFile ? language : ''}</span>

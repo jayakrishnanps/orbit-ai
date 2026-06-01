@@ -24,7 +24,7 @@ export default function TerminalPanel({ folderPath }: { folderPath?: string | nu
     term.loadAddon(fitAddon);
     term.open(divRef.current!);
     fitAddon.fit();
-    term.focus();   // Critical: give xterm keyboard focus so keys reach the PTY
+    term.focus();
 
     (window as any).electronAPI.terminalCreate(folderPath ?? undefined);
 

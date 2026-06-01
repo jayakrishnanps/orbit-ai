@@ -51,13 +51,17 @@ Core Frameworks & Runtimes:
 
 Key Libraries:
 - @monaco-editor/react + monaco-editor — Professional code editor component
+- monaco-editor-webpack-plugin — Required for proper Monaco worker loading in webpack
 - @xterm/xterm + @xterm/addon-fit — Terminal emulator in the browser
 - groq-sdk — Official Groq AI client for chat completions and streaming
+- node-pty — Native PTY for integrated terminal (requires special external + runtime require handling)
 
 Build & Tooling:
 - Electron Forge 7.11.x (application packaging and distribution)
-- Webpack 5 (via @electron-forge/plugin-webpack)
-- TypeScript ~4.5.4
+- Webpack 5 (via @electron-forge/plugin-webpack) — heavy custom configuration required
+- @vercel/webpack-asset-relocator-loader — Native module relocation
+- monaco-editor-webpack-plugin
+- TypeScript ~4.5.4 (with custom webpack ts-loader settings)
 - ts-loader + ForkTsCheckerWebpackPlugin
 - ESLint with TypeScript and Electron plugins
 - CSS Modules / plain CSS for styling
@@ -143,7 +147,10 @@ Responsibilities of the Main Process:
 4. Native OS dialogs (folder picker)
 5. File system operations using Node fs/promises
 6. Recursive directory tree generation with sensible ignores
-7. Child process spawning for integrated terminal (PowerShell)
+7. Child process spawning for integrated terminal (PowerShell via node-pty)
+   - Special handling required: node-pty marked as webpack external + lazy runtime require()
+   - This pattern was necessary due to conpty.node loading issues in bundled main process on Windows
+   - Known limitation: PowerShell + conpty can exit immediately in very large folders (root projects, folders with heavy node_modules). Likely caused by antivirus interference or Windows path/conpty initialization limits. Subfolders usually work reliably. Improved error reporting added to surface real exit codes.
 8. Direct calls to Groq AI via the official SDK (no proxy)
 
 IPC Communication Pattern:
@@ -157,7 +164,7 @@ through a narrow, audited API surface in preload.ts.
 Security Model:
 - Renderer has zero direct Node.js or filesystem access.
 - All capabilities are explicitly bridged via contextBridge.
-- Fuses are configured in forge.config.ts to further harden the packaged app.
+- Fuses are configured in forge.config.js to further harden the packaged app.
 
 
 5. SYSTEM ARCHITECTURE
@@ -314,15 +321,14 @@ orbit-ai/
 │
 ├── .eslintrc.json              # ESLint configuration
 ├── .gitignore
-├── forge.config.ts             # Electron Forge configuration + makers + fuses
+├── forge.config.js             # Electron Forge configuration (custom webpack setup for native modules & Monaco)
 ├── package.json
 ├── package-lock.json
 ├── tsconfig.json
 │
-├── webpack.main.config.ts
-├── webpack.renderer.config.ts
-├── webpack.rules.ts
-├── webpack.plugins.ts
+├── webpack.main.config.js      # Main process (node-pty as external + relocator)
+├── webpack.renderer.config.js  # Renderer + monaco-editor-webpack-plugin
+├── webpack.preload.config.js   # Preload bundle (solves __dirname issues)
 │
 └── AboutProject.txt            # This file
 
@@ -339,20 +345,18 @@ Important Notes on Structure:
 --------------------------------------------------------------------------------
 
 Build & Packaging Configuration:
-- forge.config.ts — Central Electron Forge configuration
-  - Packager settings (asar: true)
+- forge.config.js — Central Electron Forge configuration
+  - Custom webpack wiring for main, renderer, and preload (required to solve native module + Monaco bundling issues)
   - Makers: Squirrel (Windows), ZIP (macOS), Deb/RPM (Linux)
-  - Webpack plugin wiring main + renderer configs
   - Security Fuses (V1) hardening the packaged binary
 
-Webpack Configuration (split across four files for maintainability):
-- webpack.main.config.ts — Entry point and basic config for main process
-- webpack.renderer.config.ts — Renderer-specific settings + CSS handling
-- webpack.rules.ts — Shared loaders (TypeScript, native modules, fonts, SVGs)
-- webpack.plugins.ts — ForkTsCheckerWebpackPlugin for type checking
+Webpack Configuration (custom .js configs created during development):
+- webpack.main.config.js — Main process bundling with node-pty marked as external + @vercel/webpack-asset-relocator-loader for native modules
+- webpack.renderer.config.js — Renderer bundling + monaco-editor-webpack-plugin
+- webpack.preload.config.js — Dedicated preload configuration (solves __dirname / __filename not defined in Electron sandbox)
 
 TypeScript Configuration:
-- tsconfig.json — ES2020 target, React JSX transform, strict mode enabled
+- tsconfig.json — ES2020 target, React JSX transform, strict mode enabled, skipLibCheck: true
 
 Linting:
 - .eslintrc.json — Extends recommended TypeScript + Electron + import rules
