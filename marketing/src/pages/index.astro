@@ -3,8 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import Hero from '../components/Hero.astro';
 import AppPreview from '../components/AppPreview';
-import Features from '../components/Features.astro';
-import TechStack from '../components/TechStack.astro';
 import Download from '../components/Download.astro';
 import Footer from '../components/Footer.astro';
 ---
@@ -16,16 +14,12 @@ import Footer from '../components/Footer.astro';
   <!-- Interactive Dashboard Showcase -->
   <section id="showcase" class="max-w-7xl mx-auto px-6 pb-12">
     <div class="text-center mb-8">
-      <div class="badge mb-3">LIVE INTERACTIVE PREVIEW</div>
-      <h2 class="text-4xl font-semibold tracking-tighter">The Orbit AI dashboard</h2>
-      <p class="text-zinc-400 mt-2 max-w-lg mx-auto">This is a faithful, fully-working reproduction of the actual desktop interface. Click files, type in the terminal, chat with the AI, and use the Insert buttons.</p>
+      <h2 class="text-4xl font-semibold tracking-tighter">Live Preview</h2>
     </div>
 
     <AppPreview client:load />
   </section>
 
-  <Features />
-  <TechStack />
   <Download />
   <Footer />
 </Layout>
