@@ -1,6 +1,6 @@
 {
   "name": "orbit-ai",
-  "productName": "orbit-ai",
+  "productName": "Orbit AI",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".webpack/main",

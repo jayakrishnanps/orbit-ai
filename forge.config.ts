@@ -19,7 +19,13 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}, ['win32']),
+    new MakerSquirrel({
+      name: 'OrbitAI',
+      authors: 'Jayakrishnan PS',
+      description: 'Lightweight AI-powered desktop code editor',
+      // setupIcon: 'icon.ico', // add later for branded installer
+      // iconUrl: 'https://.../icon.ico',
+    }, ['win32']),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),

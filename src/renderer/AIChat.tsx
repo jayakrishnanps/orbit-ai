@@ -9,7 +9,7 @@ interface AIChatProps {
   currentFile: string | null;
   currentCode: string;
   folderPath?: string | null;
-  onApplyCode: (code: string, mode: 'insert' | 'replace') => void;
+  onApplyCode: (code: string, mode: 'insert' | 'replace') => { success: boolean; reason?: string };
 }
 
 export default function AIChat({ currentFile, currentCode, folderPath, onApplyCode }: AIChatProps) {
