@@ -18,15 +18,24 @@ const config: ForgeConfig = {
     // Required for node-pty (and other natives) to work inside ASAR.
     // The relocator puts natives in native_modules/, and node-pty has .node files.
     asarUnpack: ['**/node-pty/**', '**/native_modules/**/*.node', '**/*.node'],
-    // Ignore large/unnecessary dirs that slow down "Copying files" and asar finalizing
-    // (marketing/ has its own huge node_modules from the Astro site, which we don't want in the Electron app)
-    ignore: [
-      /marketing/,
-      /\.bak$/,
-      /out\//,
-      /\.git\//,
-      /node_modules\/\.cache/,
-    ],
+    // Use a function for ignore so the webpack plugin doesn't complain/warn.
+    // This excludes marketing/ (huge node_modules from the site) and other junk,
+    // while still only including the .webpack output (as the plugin intends).
+    // Without this, packaging would include the entire source + node_modules, making
+    // "Copying files" + "Finalizing package" (asar) extremely slow or hang.
+    ignore: (file: string | undefined) => {
+      if (!file) return false;
+      // Our extra excludes (marketing/ etc. - these are not part of the Electron app)
+      if (/[/\\]marketing($|[/\\])/.test(file) || /\.bak$/.test(file) || /[/\\]out($|[/\\])/.test(file) || /[/\\]\.git($|[/\\])/.test(file)) {
+        return true;
+      }
+      // Replicate the webpack plugin's default logic: only keep things under .webpack/
+      // (the plugin normally sets a function that does exactly this + some stats handling)
+      if (/[^/\\]+\.js\.map$/.test(file)) {
+        return true;
+      }
+      return !/^[/\\]\.webpack($|[/\\]).*$/.test(file);
+    },
   },
   rebuildConfig: {},
   makers: [
