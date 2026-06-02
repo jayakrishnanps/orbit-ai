@@ -9,7 +9,7 @@ import tailwindcss from '@tailwindcss/vite';
 // The marketing site lives ONLY in this folder. Astro base handles /orbit-ai subpath on Pages.
 // A dedicated workflow builds ONLY this and deploys — Electron root commands stay 100% for the desktop app.
 export default defineConfig({
-  site: 'https://jayakrishnanps12.github.io',
+  site: 'https://jayakrishnanps.github.io',
   base: '/orbit-ai',
   integrations: [react()],
 
