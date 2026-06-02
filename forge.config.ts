@@ -15,8 +15,9 @@ import { preloadConfig } from './webpack.preload.config';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    // Required for node-pty native .node modules to work inside ASAR archive
-    asarUnpack: ['**/node-pty/**'],
+    // Required for node-pty (and other natives) to work inside ASAR.
+    // The relocator puts natives in native_modules/, and node-pty has .node files.
+    asarUnpack: ['**/node-pty/**', '**/native_modules/**/*.node', '**/*.node'],
   },
   rebuildConfig: {},
   makers: [
