@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* Orbit AI Marketing — Refined dark professional theme */
+/* Orbit AI Marketing — Premium black & white theme with glows */
 :root {
-  --accent: #6366f1;
-  --accent2: #a855f7;
+  --accent: #ffffff;
+  --accent2: #cccccc;
 }
 
 body {
@@ -25,28 +25,29 @@ body {
 
 /* Card styles for features / download */
 .card {
-  background-color: #18181b;
-  border: 1px solid #27272a;
+  background-color: #111111;
+  border: 1px solid #333333;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
               border-color 0.2s,
               box-shadow 0.2s;
 }
 
 .card:hover {
-  border-color: #3f3f46;
+  border-color: #555555;
   transform: translateY(-1px);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
 }
 
-/* Primary CTA button */
+/* Primary CTA button - black with glow */
 .btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: white;
+  background-color: #000000;
+  color: #ffffff;
   font-weight: 600;
   padding: 0.75rem 1.75rem;
   border-radius: 0.75rem;
   transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+  border: 1px solid #ffffff;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -54,13 +55,54 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px -2px rgb(99 102 241 / 0.4);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
+  background-color: #111111;
+}
+
+/* Lightweight animation for Orbit AI text - subtle pulse/glow in B&W */
+.orbit-text {
+  animation: orbit-pulse 4s ease-in-out infinite;
+  will-change: transform, text-shadow;
+}
+
+@keyframes orbit-pulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    transform: scale(1.015);
+    text-shadow: 0 0 18px rgba(255, 255, 255, 0.6);
+  }
+}
+
+/* Lightweight animation for the Orbit AI text in the live preview titlebar - B&W */
+.title-orbit {
+  animation: title-glow 3.5s ease-in-out infinite;
+  will-change: text-shadow;
+}
+
+@keyframes title-glow {
+  0%, 100% {
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Light animation for logo */
+.logo-orbit {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.logo-orbit:hover {
+  transform: rotate(8deg) scale(1.08);
 }
 
 .btn-secondary {
-  background-color: #18181b;
-  border: 1px solid #27272a;
-  color: #e4e4e7;
+  background-color: #111111;
+  border: 1px solid #333333;
+  color: #cccccc;
   font-weight: 500;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -68,42 +110,50 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
 }
 
 .btn-secondary:hover {
-  background-color: #27272a;
-  border-color: #3f3f46;
+  background-color: #222222;
+  border-color: #555555;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  color: #ffffff;
 }
 
 /* Nav */
 .nav-link {
-  color: #a1a1aa;
+  color: #888888;
   transition: color 0.15s;
   font-weight: 500;
 }
 
 .nav-link:hover {
-  color: #f4f4f5;
+  color: #ffffff;
 }
 
-/* App preview window frame */
+/* App preview window frame - lively hover */
 .app-window {
   background-color: #111113;
   border: 1px solid #27272a;
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.app-window:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 35px 70px -15px rgb(0 0 0 / 0.55);
 }
 
 .app-titlebar {
-  background-color: #18181b;
-  border-bottom: 1px solid #27272a;
+  background-color: #111111;
+  border-bottom: 1px solid #333333;
   height: 42px;
   display: flex;
   align-items: center;
   padding: 0 12px;
   font-size: 13px;
-  color: #71717a;
+  color: #888888;
   -webkit-app-region: drag;
   user-select: none;
 }
@@ -116,38 +166,39 @@ body {
 
 /* IDE panes */
 .ide-sidebar {
-  background-color: #0f0f11;
-  border-right: 1px solid #27272a;
+  background-color: #0a0a0b;
+  border-right: 1px solid #333333;
 }
 
 .ide-editor {
-  background-color: #0a0a0b;
+  background-color: #000000;
   display: flex;
   flex-direction: column;
 }
 
 .ide-terminal {
-  background-color: #0c0c0e;
-  border-top: 1px solid #27272a;
+  background-color: #0a0a0b;
+  border-top: 1px solid #333333;
   font-size: 12px;
 }
 
 .ai-sidebar {
-  background-color: #111113;
-  border-left: 1px solid #27272a;
+  background-color: #0a0a0b;
+  border-left: 1px solid #333333;
   display: flex;
   flex-direction: column;
 }
 
-/* Chat bubbles */
+/* Chat bubbles - B&W */
 .chat-bubble-user {
-  background-color: #27272a;
+  background-color: #222222;
+  border: 1px solid #444444;
   border-radius: 12px 12px 4px 12px;
 }
 
 .chat-bubble-assistant {
-  background-color: #18181b;
-  border: 1px solid #27272a;
+  background-color: #111111;
+  border: 1px solid #333333;
   border-radius: 12px 12px 12px 4px;
 }
 
@@ -159,25 +210,25 @@ body {
 
 .editor-gutter {
   width: 42px;
-  color: #3f3f46;
+  color: #666666;
   text-align: right;
   padding-right: 10px;
   user-select: none;
   flex-shrink: 0;
 }
 
-.code-token-keyword { color: #c084fc; }
-.code-token-function { color: #60a5fa; }
-.code-token-string { color: #f472b6; }
-.code-token-comment { color: #4b5563; font-style: italic; }
-.code-token-number { color: #fbbf24; }
+.code-token-keyword { color: #ffffff; font-weight: 600; }
+.code-token-function { color: #cccccc; }
+.code-token-string { color: #999999; }
+.code-token-comment { color: #666666; font-style: italic; }
+.code-token-number { color: #aaaaaa; }
 
 /* Status bar */
 .status-bar {
-  background-color: #18181b;
-  border-top: 1px solid #27272a;
+  background-color: #111111;
+  border-top: 1px solid #333333;
   font-size: 11px;
-  color: #52525b;
+  color: #888888;
   height: 28px;
   display: flex;
   align-items: center;
@@ -187,7 +238,7 @@ body {
 
 /* Misc polish */
 .glass {
-  background: rgba(24, 24, 27, 0.8);
+  background: rgba(17, 17, 17, 0.8);
   backdrop-filter: blur(12px);
 }
 
@@ -195,22 +246,14 @@ body {
   font-size: 10px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: #27272a;
-  color: #a1a1aa;
+  background: #222222;
+  color: #888888;
   font-weight: 500;
   letter-spacing: 0.5px;
+  border: 1px solid #444444;
 }
 
-.feature-icon {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.08) 100%);
-  color: #6366f1;
-}
+/* feature-icon removed as Features section is no longer used */
 
 /* Toast for demo actions */
 .toast {
@@ -218,13 +261,13 @@ body {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: #18181b;
-  border: 1px solid #3f3f46;
-  color: #e4e4e7;
+  background: #000000;
+  border: 1px solid #ffffff;
+  color: #ffffff;
   padding: 10px 18px;
   border-radius: 999px;
   font-size: 13px;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
   z-index: 100;
   display: flex;
   align-items: center;

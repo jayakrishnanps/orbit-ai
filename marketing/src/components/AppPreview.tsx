@@ -312,7 +312,7 @@ useEffect(() => {
               onClick={() => toggleDir(node.name)}
               className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded cursor-pointer text-zinc-400"
             >
-              <span className="w-3.5 h-3.5 inline-block text-center">📁</span>
+              <span className="w-3.5 h-3.5 inline-block text-center">▣</span>
               <span className="text-[13px]">{node.name}</span>
             </div>
             {isExpanded && node.children && (
@@ -332,7 +332,7 @@ useEffect(() => {
             isActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-zinc-400'
           }`}
         >
-          <span className="w-3.5 h-3.5 inline-block text-center">📄</span>
+          <span className="w-3.5 h-3.5 inline-block text-center">▤</span>
           {node.name}
         </div>
       );
@@ -350,10 +350,10 @@ useEffect(() => {
             <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
             <div className="w-3 h-3 rounded-full bg-[#28c840]" />
           </div>
-          <div className="flex-1 text-center text-xs font-medium tracking-wide text-zinc-500">
+          <div className="flex-1 text-center text-xs font-medium tracking-wide text-zinc-500 title-orbit">
             Orbit AI — C:\Users\dev\my-orbit-project
           </div>
-          <div className="text-[10px] px-2 py-px bg-zinc-800 rounded text-zinc-400">MAIN</div>
+          <div className="text-[10px] px-2 py-px bg-[#222222] border border-[#444444] rounded text-[#888888]">MAIN</div>
         </div>
 
         <div className="app-content text-sm">
@@ -386,11 +386,11 @@ useEffect(() => {
                   }}
                   className={`flex items-center gap-1.5 pl-3 pr-2 py-1 text-xs rounded-t cursor-pointer mr-0.5 border-b-2 ${
                     activeFile === tab 
-                      ? 'bg-[#0a0a0b] border-indigo-500 text-white' 
+                      ? 'bg-[#0a0a0b] border-white text-white' 
                       : 'border-transparent text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
-                  <span className="w-3.5 h-3.5 inline-block text-center">📄</span>
+                  <span className="w-3.5 h-3.5 inline-block text-center">▤</span>
                   {tab}
                   {tab !== 'App.tsx' && (
                     <span onClick={(e) => closeTab(tab, e)} className="w-3 h-3 inline-block text-center hover:text-white cursor-pointer">✕</span>
@@ -404,8 +404,8 @@ useEffect(() => {
               id="editor-surface"
               className="ide-editor flex-1 p-3 overflow-auto font-medium leading-[1.45] mono text-[13px] text-zinc-200"
             >
-              <div className="flex items-center gap-2 text-[10px] text-emerald-400 mb-2 pl-1">
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+              <div className="flex items-center gap-2 text-[10px] text-white/70 mb-2 pl-1">
+                <div className="w-1.5 h-1.5 bg-white/70 rounded-full" />
                 {activeFile} • {SAMPLE_FILES[activeFile]?.language.toUpperCase()}
               </div>
 
@@ -422,15 +422,15 @@ useEffect(() => {
             {/* Integrated Terminal */}
             <div className="ide-terminal h-[138px] flex flex-col">
               <div className="px-3 py-1 text-[10px] text-zinc-500 border-b border-white/10 flex items-center gap-2">
-                <span className="w-3 h-3 inline-block text-center">💻</span> TERMINAL — PowerShell
+                <span className="w-3 h-3 inline-block text-center">⌥</span> TERMINAL — PowerShell
               </div>
-              <div className="flex-1 p-2.5 overflow-auto mono text-emerald-300/90 text-[12px] leading-snug bg-black/30">
+              <div className="flex-1 p-2.5 overflow-auto mono text-white/70 text-[12px] leading-snug bg-black/30">
                 {terminalLines.map((line, idx) => (
                   <div key={idx}>{line || '\u00A0'}</div>
                 ))}
               </div>
-              <div className="flex items-center border-t border-white/10 bg-black/40 px-2 text-emerald-300/90 mono text-xs">
-                <span className="text-emerald-400 mr-1.5">PS&gt;</span>
+              <div className="flex items-center border-t border-white/10 bg-black/40 px-2 text-white/70 mono text-xs">
+                <span className="text-white/70 mr-1.5">PS&gt;</span>
                 <input
                   value={terminalInput}
                   onChange={(e) => setTerminalInput(e.target.value)}
@@ -446,14 +446,14 @@ useEffect(() => {
           <div className="ai-sidebar w-[280px] shrink-0 flex flex-col">
             <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-4 h-4 inline-block text-center">🤖</span>
+                <span className="w-4 h-4 inline-block text-center">◉</span>
                 <span className="font-semibold text-sm">AI Assistant</span>
               </div>
               <div className="badge">llama-3.3-70b</div>
             </div>
 
             <div className="px-2.5 py-1.5 text-[10px] text-zinc-500 border-b border-white/10 flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-violet-400 rounded-full" />
+              <div className="w-1.5 h-1.5 bg-white/70 rounded-full" />
               Context: {activeFile} (412 tokens)
             </div>
 
@@ -466,7 +466,7 @@ useEffect(() => {
                   }`}>
                     {m.content}
                     {m.code && (
-                      <pre className="mt-2 p-2 bg-black/60 rounded text-[11px] overflow-x-auto text-emerald-200/90 border border-white/10">
+                      <pre className="mt-2 p-2 bg-black/60 rounded text-[11px] overflow-x-auto text-white/70 border border-white/10">
                         {m.code}
                       </pre>
                     )}
@@ -476,9 +476,9 @@ useEffect(() => {
                     <div className="flex gap-1.5 justify-end mt-1.5 pr-0.5">
                       <button
                         onClick={() => insertCode(m.code!)}
-                        className="text-[10px] flex items-center gap-1 px-2.5 py-px rounded bg-indigo-500/90 hover:bg-indigo-500 active:bg-indigo-600 text-white transition"
+                        className="text-[10px] flex items-center gap-1 px-2.5 py-px rounded bg-black hover:bg-white/10 active:bg-white/20 text-white border border-white/50 transition" style={{boxShadow: '0 0 6px rgba(255,255,255,0.3)'}}
                       >
-                        <span className="w-3 h-3 inline-block text-center">→</span> Insert at cursor
+                        <span className="w-3 h-3 inline-block text-center">▷</span> Insert at cursor
                       </button>
                       <button
                         onClick={() => {
@@ -540,7 +540,7 @@ useEffect(() => {
                   disabled={!chatInput.trim() || isReplying}
                   className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 transition"
                 >
-                  <span className="w-4 h-4 inline-block text-center">➤</span>
+                  <span className="w-4 h-4 inline-block text-center">▸</span>
                 </button>
               </div>
               <div className="text-[9px] text-center text-zinc-600 mt-1">Press Enter to send • Powered by Groq (local key required in app)</div>
@@ -554,14 +554,14 @@ useEffect(() => {
           <div>{activeFile} — Ln {editorContent.split('\n').length}, Col 18</div>
           <div className="flex-1" />
           <div>UTF-8 • LF</div>
-          <div className="text-emerald-400/70">● Saved</div>
+          <div className="text-white/70">● Saved</div>
         </div>
       </div>
 
       {/* Toast */}
       {toast && (
         <div className="toast">
-          <span className="w-4 h-4 inline-block text-center text-emerald-400">✓</span> {toast}
+          <span className="w-4 h-4 inline-block text-center text-white">●</span> {toast}
         </div>
       )}
 

@@ -1,0 +1,49 @@
+---
+// Built with section - black/white/grey premium theme, no emojis, glowing cards, white icons
+import AnimatedHeading from './AnimatedHeading';
+---
+
+<section id="built-with" class="section max-w-6xl mx-auto px-6">
+  <div class="text-center mb-10">
+    <AnimatedHeading text="Built with" className="text-3xl" client:load />
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Site Tech -->
+    <div class="card rounded-2xl p-6 group hover:scale-[1.01] transition-transform">
+      <svg width="24" height="24" fill="white" viewBox="0 0 24 24" class="mb-3"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <h3 class="font-semibold text-lg mb-1">Astro</h3>
+      <p class="text-sm text-zinc-400">Lightning-fast static site generator with islands architecture for the UI.</p>
+    </div>
+    <div class="card rounded-2xl p-6 group hover:scale-[1.01] transition-transform">
+      <svg width="24" height="24" fill="white" viewBox="0 0 24 24" class="mb-3"><circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 00-6.88 2.5M12 22a10 10 0 006.88-2.5M2 12a10 10 0 002.5 6.88M22 12a10 10 0 00-2.5-6.88"/></svg>
+      <h3 class="font-semibold text-lg mb-1">React + TypeScript</h3>
+      <p class="text-sm text-zinc-400">Interactive components and the fully functional live preview dashboard.</p>
+    </div>
+    <div class="card rounded-2xl p-6 group hover:scale-[1.01] transition-transform">
+      <svg width="24" height="24" fill="white" viewBox="0 0 24 24" class="mb-3"><path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h16v2H4v-2z"/></svg>
+      <h3 class="font-semibold text-lg mb-1">Tailwind CSS v4</h3>
+      <p class="text-sm text-zinc-400">Utility-first styling with Vite plugin for rapid, responsive design.</p>
+    </div>
+
+    <!-- Preview / App Emulation -->
+    <div class="card rounded-2xl p-6 group hover:scale-[1.01] transition-transform">
+      <svg width="24" height="24" fill="white" viewBox="0 0 24 24" class="mb-3"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+      <h3 class="font-semibold text-lg mb-1">Monaco Editor</h3>
+      <p class="text-sm text-zinc-400">The exact code editor engine from VS Code, used in the live preview.</p>
+    </div>
+    <div class="card rounded-2xl p-6 group hover:scale-[1.01] transition-transform">
+      <svg width="24" height="24" fill="white" viewBox="0 0 24 24" class="mb-3"><path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h16v2H4v-2z"/></svg>
+      <h3 class="font-semibold text-lg mb-1">xterm.js</h3>
+      <p class="text-sm text-zinc-400">Terminal emulator powering the integrated terminal demo in the preview.</p>
+    </div>
+    <div class="card rounded-2xl p-6 group hover:scale-[1.01] transition-transform">
+      <svg width="24" height="24" fill="white" viewBox="0 0 24 24" class="mb-3"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+      <h3 class="font-semibold text-lg mb-1">Groq + React State</h3>
+      <p class="text-sm text-zinc-400">Simulated AI chat with streaming responses and insert/replace actions.</p>
+    </div>
+  </div>
+</section>
+
+
+</section>
