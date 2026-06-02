@@ -18,6 +18,15 @@ const config: ForgeConfig = {
     // Required for node-pty (and other natives) to work inside ASAR.
     // The relocator puts natives in native_modules/, and node-pty has .node files.
     asarUnpack: ['**/node-pty/**', '**/native_modules/**/*.node', '**/*.node'],
+    // Ignore large/unnecessary dirs that slow down "Copying files" and asar finalizing
+    // (marketing/ has its own huge node_modules from the Astro site, which we don't want in the Electron app)
+    ignore: [
+      /marketing/,
+      /\.bak$/,
+      /out\//,
+      /\.git\//,
+      /node_modules\/\.cache/,
+    ],
   },
   rebuildConfig: {},
   makers: [
