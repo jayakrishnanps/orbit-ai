@@ -341,8 +341,11 @@ useEffect(() => {
 
   return (
     <div className="relative">
-      {/* Window frame */}
-      <div className="app-window mx-auto max-w-[1080px] select-none">
+      {/* Horizontally scrollable on mobile to reveal editor + terminal (Explorer + AI take fixed space).
+          Desktop unchanged (exact same layout + no scroll on sm+). */}
+      <div className="overflow-x-auto sm:overflow-visible -mx-2 sm:-mx-0 px-2 sm:px-0 pb-2 sm:pb-0">
+        {/* Window frame */}
+        <div className="app-window mx-auto max-w-[1080px] min-w-[720px] sm:min-w-0 select-none">
         {/* Titlebar */}
         <div className="app-titlebar">
           <div className="flex items-center gap-1.5 mr-3">
@@ -356,9 +359,9 @@ useEffect(() => {
           <div className="text-[10px] px-2 py-px bg-[#222222] border border-[#444444] rounded text-[#888888]">MAIN</div>
         </div>
 
-        <div className="app-content text-sm">
+        <div className="app-content text-sm h-[460px] sm:h-[520px]">
           {/* Left: File explorer + activity */}
-          <div className="ide-sidebar w-[210px] flex flex-col shrink-0 overflow-hidden">
+          <div className="ide-sidebar w-[160px] sm:w-[210px] flex flex-col shrink-0 overflow-hidden">
             <div className="px-3 py-2 text-[10px] uppercase tracking-[1px] text-zinc-500 border-b border-white/10 flex items-center justify-between">
               <span>EXPLORER</span>
               <span className="w-3 h-3 inline-block text-center">+</span>
@@ -420,7 +423,7 @@ useEffect(() => {
             </div>
 
             {/* Integrated Terminal */}
-            <div className="ide-terminal h-[138px] flex flex-col">
+            <div className="ide-terminal h-[110px] sm:h-[138px] flex flex-col">
               <div className="px-3 py-1 text-[10px] text-zinc-500 border-b border-white/10 flex items-center gap-2">
                 <span className="w-3 h-3 inline-block text-center">⌥</span> TERMINAL — PowerShell
               </div>
@@ -443,7 +446,7 @@ useEffect(() => {
           </div>
 
           {/* Right: AI Chat Sidebar (the star feature) */}
-          <div className="ai-sidebar w-[280px] shrink-0 flex flex-col">
+          <div className="ai-sidebar w-[200px] sm:w-[280px] shrink-0 flex flex-col">
             <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 inline-block text-center">◉</span>
@@ -557,6 +560,7 @@ useEffect(() => {
           <div className="text-white/70">● Saved</div>
         </div>
       </div>
+      </div> {/* close scroll wrapper (mobile only) */}
 
       {/* Toast */}
       {toast && (

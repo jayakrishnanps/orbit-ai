@@ -34,10 +34,18 @@ export default function TerminalPanel({ folderPath }: { folderPath?: string | nu
       (window as any).electronAPI.terminalWrite(data);
     });
 
+    let lastCols = 0;
+    let lastRows = 0;
     const observer = new ResizeObserver(() => {
-      fitAddon.fit();
-      const { cols, rows } = term;
-      (window as any).electronAPI.terminalResize(cols, rows);
+      requestAnimationFrame(() => {
+        fitAddon.fit();
+        const { cols, rows } = term;
+        if ((cols > 4 && rows > 4) && (cols !== lastCols || rows !== lastRows)) {
+          lastCols = cols;
+          lastRows = rows;
+          (window as any).electronAPI.terminalResize(cols, rows);
+        }
+      });
     });
     if (divRef.current) observer.observe(divRef.current);
 

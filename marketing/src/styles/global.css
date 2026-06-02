@@ -160,7 +160,7 @@ body {
 
 .app-content {
   display: flex;
-  height: 520px; /* good height for preview */
+  height: 520px; /* overridden responsively in AppPreview for mobile */
   font-size: 13px;
 }
 

@@ -1,7 +1,6 @@
 import type { ModuleOptions } from 'webpack';
 
 export const rules: Required<ModuleOptions>['rules'] = [
-  // Add support for native node modules
   {
     test: /\.node$/,
     use: 'node-loader',
@@ -27,8 +26,6 @@ export const rules: Required<ModuleOptions>['rules'] = [
       },
     },
   },
-  // Monaco Editor requires TTF fonts (Codicon) and SVGs.
-  // Without asset rules these binary files crash the webpack bundle.
   {
     test: /\.(woff|woff2|eot|ttf|otf)$/,
     type: 'asset/resource',

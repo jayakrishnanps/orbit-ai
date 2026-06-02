@@ -28,8 +28,6 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Register stream listener ONCE (prevents accumulation of ipc handlers on every send).
-  // Per-message chunkHandler is swapped via ref. Cleanup on unmount follows remove pattern.
   useEffect(() => {
     const api = (window as any).electronAPI;
     const dispatcher = (delta: string) => {
@@ -39,7 +37,6 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
 
     return () => {
       chunkHandlerRef.current = null;
-      // removeListener pattern (full unsubscription would need preload to expose remover or use ipcRenderer directly)
     };
   }, []);
 
@@ -56,7 +53,7 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
     const userMessage = input.trim();
     const newHistory = [...messages, { role: 'user' as const, content: userMessage }];
     setMessages(newHistory);
-    setInput(''); // clear input immediately
+    setInput('');
 
     let systemPrompt = `You are Orbit AI, an expert coding assistant.
 
@@ -82,7 +79,7 @@ If the user is not asking to change code, respond normally with text.`;
       try {
         const tree = await (window as any).electronAPI.getFileTree(folderPath);
         systemPrompt += `\n\nProject tree:\n` + JSON.stringify(tree).slice(0, 3500);
-      } catch (e) { /* ignore tree error */ }
+      } catch (e) {}
     }
 
     if (currentFile) {
@@ -121,7 +118,6 @@ If the user is not asking to change code, respond normally with text.`;
 
       const raw = assistantMessage.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
 
-      // Extract first code block content (the entire new file)
       const codeBlockMatch = raw.match(/```(?:\w+)?\n([\s\S]*?)```/);
       const extractedCode = codeBlockMatch ? codeBlockMatch[1] : null;
 
@@ -129,7 +125,6 @@ If the user is not asking to change code, respond normally with text.`;
 
       if (currentFile) {
         if (extractedCode) {
-          // Full file rewrite path - the most reliable method
           const result = onApplyCode(extractedCode, 'replace');
 
           const fileName = currentFile.split(/[/\\]/).pop();
@@ -137,7 +132,6 @@ If the user is not asking to change code, respond normally with text.`;
             ? `Done. I've updated ${fileName} with the requested changes.`
             : `I tried to update ${fileName}, but the changes could not be applied.`;
         } else {
-          // No code block found — model did not follow instructions
           displayMessage = `I couldn't find a code block in the response. Please try again and ask me to edit the file.`;
         }
       }
@@ -206,7 +200,6 @@ If the user is not asking to change code, respond normally with text.`;
 
   return (
     <div className="chat-panel">
-      {/* Header */}
       <div className="chat-header">
         <span className="chat-header__title">🛸 Orbit AI</span>
         <button
@@ -218,7 +211,6 @@ If the user is not asking to change code, respond normally with text.`;
         </button>
       </div>
 
-      {/* API key input */}
       {showKey && (
         <div className="chat-apikey">
           <input
@@ -241,7 +233,6 @@ If the user is not asking to change code, respond normally with text.`;
         </div>
       )}
 
-      {/* Context badge */}
       {(currentFile || attachedFiles.length > 0) && (
         <div className="chat-context">
           {currentFile && `📄 ${currentFile.split(/[/\\]/).pop()}`}
@@ -249,7 +240,6 @@ If the user is not asking to change code, respond normally with text.`;
         </div>
       )}
 
-      {/* Messages */}
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="chat-empty">
@@ -267,7 +257,6 @@ If the user is not asking to change code, respond normally with text.`;
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div 
         className="chat-input-row"
         onDragOver={handleDragOver}

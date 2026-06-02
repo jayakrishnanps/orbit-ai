@@ -10,16 +10,32 @@ import Footer from '../components/Footer.astro';
 
 <Layout>
   <Navbar />
-  <Hero />
 
-  <!-- Interactive Dashboard Showcase -->
-  <section id="showcase" class="max-w-7xl mx-auto px-6 pb-12">
-    <div class="text-center mb-8">
-      <AnimatedHeading text="Live Preview" client:load />
+  <div class="relative">
+    <div class="absolute top-[-80px] left-1/2 -translate-x-1/2 w-full max-w-7xl h-[620px] overflow-hidden z-0">
+      <video
+        class="absolute top-[-30px] left-0 w-full h-[calc(100%+60px)] object-contain object-[50%_50%] opacity-40 pointer-events-none"
+        autoplay
+        loop
+        muted
+        playsinline
+        src="https://res.cloudinary.com/dvfrakfvm/video/upload/q_auto/f_auto/v1780404483/New_Project_A0A6F6F_r00glt.mp4"
+      ></video>
+      <div class="absolute inset-0 bg-[#0a0a0b]/55 z-0 pointer-events-none"></div>
     </div>
 
-    <AppPreview client:load />
-  </section>
+    <div class="relative z-10">
+      <Hero />
+
+      <section id="showcase" class="max-w-7xl mx-auto px-6 pb-12">
+        <div class="text-center mb-8">
+          <AnimatedHeading text="Live Preview" client:load />
+        </div>
+
+        <AppPreview client:load />
+      </section>
+    </div>
+  </div>
 
   <BuiltWith />
   <Footer />

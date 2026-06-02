@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   onStreamChunk: (callback: (delta: string) => void) =>
     ipcRenderer.on('ai:stream-chunk', (_event, delta) => callback(delta)),
+
+  terminalDestroy: () => ipcRenderer.send('terminal:destroy'),
 });

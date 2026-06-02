@@ -15,7 +15,7 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 let ptyProcess: ptyType.IPty | null = null;
 let ptySender: Electron.WebContents | null = null;
-let suppressExitMessage = false;   // NEW
+let suppressExitMessage = false;
 
 if (require('electron-squirrel-startup')) {
   app.quit();
@@ -27,12 +27,24 @@ const createWindow = (): void => {
     width: 1280,
     minHeight: 480,
     minWidth: 800,
+    backgroundColor: '#1e1e1e',
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      contextIsolation: true,   // required for contextBridge
-      nodeIntegration: false,   // security: keep Node out of renderer
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
+
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; connect-src 'self' ws: wss:; img-src 'self' data:; font-src 'self' data:"]
+        }
+      });
+    });
+  }
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.webContents.openDevTools();
@@ -139,14 +151,13 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
 ipcMain.handle('terminal:create', async (event, cwd?: string) => {
   if (ptyProcess) {
     suppressExitMessage = true;
-    try { ptyProcess.kill(); } catch (e) { /* ignore kill error */ }
+    try { ptyProcess.kill(); } catch (e) {}
     ptyProcess = null;
     ptySender = null;
   }
 
   const targetCwd = cwd || process.env.USERPROFILE || process.env.HOME || process.cwd();
 
-  // Use runtime require (node-pty is marked external in webpack)
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const pty = require('node-pty') as typeof ptyType;
 
@@ -178,7 +189,7 @@ ipcMain.handle('terminal:create', async (event, cwd?: string) => {
       suppressExitMessage = false;
       ptyProcess = null;
       ptySender = null;
-      return;   // NO exit banner for intentional restarts
+      return;
     }
 
     if (ptySender && !ptySender.isDestroyed()) {
@@ -192,7 +203,6 @@ ipcMain.handle('terminal:create', async (event, cwd?: string) => {
   return { pid: ptyProcess.pid };
 });
 
-// Terminal I/O listeners (registered once)
 ipcMain.on('terminal:write', (_e, data: string) => {
   if (ptyProcess) {
     ptyProcess.write(data);
@@ -208,7 +218,7 @@ ipcMain.on('terminal:resize', (_e, { cols, rows }: { cols: number; rows: number 
 ipcMain.on('terminal:destroy', () => {
   if (ptyProcess) {
     suppressExitMessage = true;
-    try { ptyProcess.kill(); } catch (e) { /* ignore kill error */ }
+    try { ptyProcess.kill(); } catch (e) {}
     ptyProcess = null;
     ptySender = null;
   }

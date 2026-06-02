@@ -3,12 +3,27 @@ import * as path from 'path';
 import * as webpack from 'webpack';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 
-import { rules } from './webpack.rules';
 import { plugins as basePlugins } from './webpack.plugins';
 
-// Add CSS rule for renderer (not needed in main)
 const rendererRules = [
-  ...rules,
+  {
+    test: /\.tsx?$/,
+    exclude: /(node_modules|\.webpack)/,
+    use: {
+      loader: 'ts-loader',
+      options: {
+        transpileOnly: true,
+      },
+    },
+  },
+  {
+    test: /\.(woff|woff2|eot|ttf|otf)$/,
+    type: 'asset/resource',
+  },
+  {
+    test: /\.svg$/,
+    type: 'asset/resource',
+  },
   {
     test: /\.css$/,
     use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
@@ -43,7 +58,7 @@ export const rendererConfig: Configuration = {
     globalObject: 'self',
   },
   node: {
-    __dirname: true,
-    __filename: true,
+    __dirname: false,
+    __filename: false,
   },
 };

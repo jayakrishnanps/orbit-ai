@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MonacoEditor, { loader } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+import MonacoEditor from '@monaco-editor/react';
+import 'monaco-editor/esm/vs/editor/editor.main.css';
 import './app.css';
 import TerminalPanel from './Terminal';
 import { FileTree, FileNode } from './FileTree';
@@ -8,24 +8,19 @@ import AIChat from './AIChat';
 import EditorTabs from './EditorTabs';
 
 (self as any).MonacoEnvironment = {
-  getWorker(_moduleId: string, label: string) {
+  getWorkerUrl: function (_moduleId: string, label: string) {
+    let worker = 'editor.worker.js';
     if (label === 'json') {
-      return new Worker(
-        new URL('monaco-editor/esm/vs/language/json/json.worker', import.meta.url)
-      );
+      worker = 'json.worker.js';
+    } else if (label === 'typescript' || label === 'javascript') {
+      worker = 'ts.worker.js';
     }
-    if (label === 'typescript' || label === 'javascript') {
-      return new Worker(
-        new URL('monaco-editor/esm/vs/language/typescript/ts.worker', import.meta.url)
-      );
+    if (typeof window !== 'undefined' && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+      return `/${worker}`;
     }
-    return new Worker(
-      new URL('monaco-editor/esm/vs/editor/editor.worker', import.meta.url)
-    );
-  },
+    return `../${worker}`;
+  }
 };
-
-loader.config({ monaco });
 
 declare global {
   interface Window {
@@ -38,6 +33,9 @@ declare global {
       terminalWrite: (data: string) => void;
       terminalResize: (cols: number, rows: number) => void;
       onTerminalData: (cb: (data: string) => void) => void;
+      terminalDestroy?: () => void;
+      aiStream?: (apiKey: string, messages: any[]) => Promise<any>;
+      onStreamChunk?: (callback: (delta: string) => void) => void;
     };
   }
 }
@@ -73,30 +71,40 @@ function App() {
   const saved = activeTab?.saved ?? true;
 
   const openFolder = async () => {
-    const selected = await window.electronAPI.openFolder();
-    if (!selected) return;
+    try {
+      const selected = await window.electronAPI.openFolder();
+      if (!selected) return;
 
-    const baseName = selected.split(/[/\\]/).pop()?.toLowerCase() || '';
-    if (baseName === 'node_modules' || baseName === '.git') {
-      alert(`It is not recommended to open "${baseName}" as a project folder. The file tree and terminal will be very slow or empty. Please choose the actual project root instead.`);
-      return;
+      const baseName = selected.split(/[/\\]/).pop()?.toLowerCase() || '';
+      if (baseName === 'node_modules' || baseName === '.git') {
+        alert(`It is not recommended to open "${baseName}" as a project folder. The file tree and terminal will be very slow or empty. Please choose the actual project root instead.`);
+        return;
+      }
+
+      const tree = await window.electronAPI.getFileTree(selected);
+      setFileTree(tree);
+      setFolderPath(selected);
+    } catch (e) {
+      console.error('Failed to open folder:', e);
+      alert('Failed to open folder: ' + ((e as Error)?.message || e));
     }
-
-    const tree = await window.electronAPI.getFileTree(selected);
-    setFileTree(tree);
-    setFolderPath(selected);
   };
 
   const openFileInNewTab = async (filePath: string) => {
-    const content = await window.electronAPI.readFile(filePath);
-    const name = filePath.split(/[/\\]/).pop() || 'Untitled';
-    setTabs(prev => {
-      const existing = prev.find(t => t.path === filePath);
-      if (existing) return prev;
-      return [...prev, { path: filePath, name, content, saved: true }];
-    });
-    setActiveTabPath(filePath);
-    setLanguage(getLanguage(filePath));
+    try {
+      const content = await window.electronAPI.readFile(filePath);
+      const name = filePath.split(/[/\\]/).pop() || 'Untitled';
+      setTabs(prev => {
+        const existing = prev.find(t => t.path === filePath);
+        if (existing) return prev;
+        return [...prev, { path: filePath, name, content, saved: true }];
+      });
+      setActiveTabPath(filePath);
+      setLanguage(getLanguage(filePath));
+    } catch (e) {
+      console.error('Failed to open file:', e);
+      alert('Failed to read file: ' + ((e as Error)?.message || e));
+    }
   };
 
   const closeTab = (path: string) => {
@@ -175,7 +183,7 @@ function App() {
           return { success: false, reason: 'find-not-found' };
         }
       } catch (e) {
-        // fall through
+        
       }
     }
 
@@ -184,7 +192,6 @@ function App() {
     return { success: false, reason: 'legacy-path-used' };
   }, [currentFile, editorRef]);
 
-  // Global save handler
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 's') {
@@ -201,7 +208,6 @@ function App() {
   return (
     <div className="ide-shell">
 
-      {/* Title bar */}
       <div className="ide-titlebar">
         <span className="ide-titlebar__title">
           Orbit AI{folderName ? ` — ${folderName}` : ''}
@@ -213,12 +219,10 @@ function App() {
 
       <div className="ide-body">
 
-        {/* Activity bar */}
         <div className="ide-activity">
           <div className="ide-activity__icon" title="Explorer">📁</div>
         </div>
 
-        {/* Sidebar / File Explorer */}
         <div className="ide-sidebar">
           <div className="ide-sidebar__header">Explorer</div>
           {folderName && (
@@ -239,10 +243,8 @@ function App() {
           </div>
         </div>
 
-        {/* Editor + Terminal column */}
         <div className="ide-editor">
 
-          {/* Tab bar */}
           <EditorTabs
             tabs={tabs.map(t => ({ path: t.path, name: t.name, saved: t.saved }))}
             activeTabPath={activeTabPath}
@@ -250,7 +252,6 @@ function App() {
             onTabClose={closeTab}
           />
 
-          {/* Monaco */}
           <div className="ide-monaco">
             {currentFile ? (
               <MonacoEditor
@@ -281,21 +282,18 @@ function App() {
             )}
           </div>
 
-          {/* Terminal */}
           <div className="ide-terminal">
             <TerminalPanel folderPath={folderPath} />
           </div>
 
         </div>
 
-        {/* AI Chat sidebar */}
         <div className="ide-chat">
           <AIChat currentFile={activeTabPath} currentCode={code} folderPath={folderPath} onApplyCode={applyToEditor} />
         </div>
 
       </div>
 
-      {/* Status bar */}
       <div className="ide-statusbar">
         <span>{saved ? 'Saved' : '● Unsaved changes'}</span>
         <span>{currentFile ? language : ''}</span>
