@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import * as Lucide from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -84,7 +83,7 @@ export default function AppPreview() {
   const [openTabs, setOpenTabs] = useState<string[]>(['App.tsx']);
   const [activeFile, setActiveFile] = useState<string>('App.tsx');
   const [editorContent, setEditorContent] = useState(SAMPLE_FILES['App.tsx'].content);
-  const [tree, setTree] = useState(INITIAL_TREE);
+  const [tree] = useState(INITIAL_TREE);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set(['src']));
 
   // Terminal state
@@ -313,7 +312,7 @@ useEffect(() => {
               onClick={() => toggleDir(node.name)}
               className="flex items-center gap-1.5 px-2 py-1 hover:bg-white/5 rounded cursor-pointer text-zinc-400"
             >
-              <Lucide.Folder className="w-3.5 h-3.5" />
+              <span className="w-3.5 h-3.5 inline-block text-center">📁</span>
               <span className="text-[13px]">{node.name}</span>
             </div>
             {isExpanded && node.children && (
@@ -333,7 +332,7 @@ useEffect(() => {
             isActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-zinc-400'
           }`}
         >
-          <Lucide.FileText className="w-3.5 h-3.5" />
+          <span className="w-3.5 h-3.5 inline-block text-center">📄</span>
           {node.name}
         </div>
       );
@@ -362,7 +361,7 @@ useEffect(() => {
           <div className="ide-sidebar w-[210px] flex flex-col shrink-0 overflow-hidden">
             <div className="px-3 py-2 text-[10px] uppercase tracking-[1px] text-zinc-500 border-b border-white/10 flex items-center justify-between">
               <span>EXPLORER</span>
-              <Lucide.Plus className="w-3 h-3" />
+              <span className="w-3 h-3 inline-block text-center">+</span>
             </div>
             
             <div className="p-1.5 text-zinc-300 overflow-auto flex-1 text-[13px]">
@@ -391,13 +390,10 @@ useEffect(() => {
                       : 'border-transparent text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
-                  <Lucide.FileText className="w-3.5 h-3.5" />
+                  <span className="w-3.5 h-3.5 inline-block text-center">📄</span>
                   {tab}
                   {tab !== 'App.tsx' && (
-                    <Lucide.X 
-                      onClick={(e) => closeTab(tab, e)} 
-                      className="w-3 h-3 hover:text-white" 
-                    />
+                    <span onClick={(e) => closeTab(tab, e)} className="w-3 h-3 inline-block text-center hover:text-white cursor-pointer">✕</span>
                   )}
                 </div>
               ))}
@@ -426,7 +422,7 @@ useEffect(() => {
             {/* Integrated Terminal */}
             <div className="ide-terminal h-[138px] flex flex-col">
               <div className="px-3 py-1 text-[10px] text-zinc-500 border-b border-white/10 flex items-center gap-2">
-                <Lucide.Terminal className="w-3 h-3" /> TERMINAL — PowerShell
+                <span className="w-3 h-3 inline-block text-center">💻</span> TERMINAL — PowerShell
               </div>
               <div className="flex-1 p-2.5 overflow-auto mono text-emerald-300/90 text-[12px] leading-snug bg-black/30">
                 {terminalLines.map((line, idx) => (
@@ -450,7 +446,7 @@ useEffect(() => {
           <div className="ai-sidebar w-[280px] shrink-0 flex flex-col">
             <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Lucide.Bot className="w-4 h-4 text-violet-400" />
+                <span className="w-4 h-4 inline-block text-center">🤖</span>
                 <span className="font-semibold text-sm">AI Assistant</span>
               </div>
               <div className="badge">llama-3.3-70b</div>
@@ -482,7 +478,7 @@ useEffect(() => {
                         onClick={() => insertCode(m.code!)}
                         className="text-[10px] flex items-center gap-1 px-2.5 py-px rounded bg-indigo-500/90 hover:bg-indigo-500 active:bg-indigo-600 text-white transition"
                       >
-                        <Lucide.ArrowRight className="w-3 h-3" /> Insert at cursor
+                        <span className="w-3 h-3 inline-block text-center">→</span> Insert at cursor
                       </button>
                       <button
                         onClick={() => {
@@ -544,7 +540,7 @@ useEffect(() => {
                   disabled={!chatInput.trim() || isReplying}
                   className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 transition"
                 >
-                  <Lucide.Send className="w-4 h-4" />
+                  <span className="w-4 h-4 inline-block text-center">➤</span>
                 </button>
               </div>
               <div className="text-[9px] text-center text-zinc-600 mt-1">Press Enter to send • Powered by Groq (local key required in app)</div>
@@ -565,7 +561,7 @@ useEffect(() => {
       {/* Toast */}
       {toast && (
         <div className="toast">
-          <Lucide.Check className="w-4 h-4 text-emerald-400" /> {toast}
+          <span className="w-4 h-4 inline-block text-center text-emerald-400">✓</span> {toast}
         </div>
       )}
 

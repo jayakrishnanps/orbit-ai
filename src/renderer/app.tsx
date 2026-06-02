@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import Editor, { loader } from '@monaco-editor/react';
+import MonacoEditor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import './app.css';
 import TerminalPanel from './Terminal';
@@ -130,13 +130,13 @@ function App() {
     ));
   }, [currentFile]);
 
-  const applyToEditor = useCallback((aiCode: string, mode: 'insert' | 'replace') => {
+  const applyToEditor = useCallback((aiCode: string, _mode: 'insert' | 'replace') => {
     if (!editorRef.current) {
       return { success: false, reason: 'no-editor' };
     }
 
     const editor = editorRef.current;
-    const selection = editor.getSelection();
+    const _selection = editor.getSelection();
 
     if (typeof aiCode === 'string' && !aiCode.startsWith('{') && !aiCode.includes('EDIT:')) {
       const model = editor.getModel();
@@ -197,7 +197,6 @@ function App() {
   }, [saveFile]);
 
   const folderName = folderPath ? basename(folderPath) : null;
-  const fileName   = currentFile ? basename(currentFile) : null;
 
   return (
     <div className="ide-shell">
@@ -254,7 +253,7 @@ function App() {
           {/* Monaco */}
           <div className="ide-monaco">
             {currentFile ? (
-              <Editor
+              <MonacoEditor
                 height="100%"
                 language={language}
                 value={code}

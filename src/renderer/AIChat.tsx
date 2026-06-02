@@ -82,7 +82,7 @@ If the user is not asking to change code, respond normally with text.`;
       try {
         const tree = await (window as any).electronAPI.getFileTree(folderPath);
         systemPrompt += `\n\nProject tree:\n` + JSON.stringify(tree).slice(0, 3500);
-      } catch {}
+      } catch (e) { /* ignore tree error */ }
     }
 
     if (currentFile) {

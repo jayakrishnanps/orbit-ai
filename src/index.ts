@@ -54,7 +54,7 @@ ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
   return true;
 });
 
-ipcMain.handle('fs:createFile', async (_event, path: string, content: string = '') => {
+ipcMain.handle('fs:createFile', async (_event, path: string, content = '') => {
   const fs = await import('fs/promises');
   await fs.writeFile(path, content, 'utf-8');
   return true;
@@ -139,7 +139,7 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
 ipcMain.handle('terminal:create', async (event, cwd?: string) => {
   if (ptyProcess) {
     suppressExitMessage = true;
-    try { ptyProcess.kill(); } catch {}
+    try { ptyProcess.kill(); } catch (e) { /* ignore kill error */ }
     ptyProcess = null;
     ptySender = null;
   }
@@ -147,6 +147,7 @@ ipcMain.handle('terminal:create', async (event, cwd?: string) => {
   const targetCwd = cwd || process.env.USERPROFILE || process.env.HOME || process.cwd();
 
   // Use runtime require (node-pty is marked external in webpack)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const pty = require('node-pty') as typeof ptyType;
 
   try {
@@ -207,7 +208,7 @@ ipcMain.on('terminal:resize', (_e, { cols, rows }: { cols: number; rows: number 
 ipcMain.on('terminal:destroy', () => {
   if (ptyProcess) {
     suppressExitMessage = true;
-    try { ptyProcess.kill(); } catch {}
+    try { ptyProcess.kill(); } catch (e) { /* ignore kill error */ }
     ptyProcess = null;
     ptySender = null;
   }
