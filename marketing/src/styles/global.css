@@ -1,0 +1,238 @@
+@import "tailwindcss";
+
+/* Orbit AI Marketing — Refined dark professional theme */
+:root {
+  --accent: #6366f1;
+  --accent2: #a855f7;
+}
+
+body {
+  font-feature-settings: "tnum";
+}
+
+/* Premium section spacing */
+.section {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+}
+
+/* Card styles for features / download */
+.card {
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.2s,
+              box-shadow 0.2s;
+}
+
+.card:hover {
+  border-color: #3f3f46;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* Primary CTA button */
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.75rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgb(99 102 241 / 0.4);
+}
+
+.btn-secondary {
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  color: #e4e4e7;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+  background-color: #27272a;
+  border-color: #3f3f46;
+}
+
+/* Nav */
+.nav-link {
+  color: #a1a1aa;
+  transition: color 0.15s;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: #f4f4f5;
+}
+
+/* App preview window frame */
+.app-window {
+  background-color: #111113;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+  overflow: hidden;
+}
+
+.app-titlebar {
+  background-color: #18181b;
+  border-bottom: 1px solid #27272a;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #71717a;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.app-content {
+  display: flex;
+  height: 520px; /* good height for preview */
+  font-size: 13px;
+}
+
+/* IDE panes */
+.ide-sidebar {
+  background-color: #0f0f11;
+  border-right: 1px solid #27272a;
+}
+
+.ide-editor {
+  background-color: #0a0a0b;
+  display: flex;
+  flex-direction: column;
+}
+
+.ide-terminal {
+  background-color: #0c0c0e;
+  border-top: 1px solid #27272a;
+  font-size: 12px;
+}
+
+.ai-sidebar {
+  background-color: #111113;
+  border-left: 1px solid #27272a;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat bubbles */
+.chat-bubble-user {
+  background-color: #27272a;
+  border-radius: 12px 12px 4px 12px;
+}
+
+.chat-bubble-assistant {
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 12px 12px 12px 4px;
+}
+
+/* Fake editor styling */
+.editor-line {
+  display: flex;
+  padding: 1px 0;
+}
+
+.editor-gutter {
+  width: 42px;
+  color: #3f3f46;
+  text-align: right;
+  padding-right: 10px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.code-token-keyword { color: #c084fc; }
+.code-token-function { color: #60a5fa; }
+.code-token-string { color: #f472b6; }
+.code-token-comment { color: #4b5563; font-style: italic; }
+.code-token-number { color: #fbbf24; }
+
+/* Status bar */
+.status-bar {
+  background-color: #18181b;
+  border-top: 1px solid #27272a;
+  font-size: 11px;
+  color: #52525b;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 16px;
+}
+
+/* Misc polish */
+.glass {
+  background: rgba(24, 24, 27, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.badge {
+  font-size: 10px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #27272a;
+  color: #a1a1aa;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.feature-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.08) 100%);
+  color: #6366f1;
+}
+
+/* Toast for demo actions */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #e4e4e7;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toast-pop 0.2s ease forwards;
+}
+
+@keyframes toast-pop {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

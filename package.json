@@ -5,6 +5,9 @@
   "description": "My Electron application description",
   "main": ".webpack/main",
   "private": true,
+  "config": {
+    "forge": "forge.config.ts"
+  },
   "engines": {
     "node": ">=22.0.0"
   },

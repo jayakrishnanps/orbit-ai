@@ -1,0 +1,33 @@
+---
+---
+
+<section id="tech" class="section border-t border-zinc-800 bg-[#0a0a0b]">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="text-center mb-10">
+      <div class="badge mb-3">BUILT WITH PROVEN TOOLS</div>
+      <h2 class="text-3xl font-semibold tracking-tight">Technology</h2>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+      {[
+        { name: "Electron 42", desc: "Native desktop runtime" },
+        { name: "Monaco Editor", desc: "VS Code's editor engine" },
+        { name: "React 19", desc: "Modern UI foundation" },
+        { name: "Groq SDK", desc: "Ultra-fast LLM inference" },
+        { name: "xterm.js", desc: "Browser terminal emulator" },
+        { name: "node-pty", desc: "Real PTY on Windows" },
+        { name: "TypeScript", desc: "Type-safe throughout" },
+        { name: "Webpack + Forge", desc: "Custom production build" },
+      ].map(item => (
+        <div class="rounded-xl border border-zinc-800 bg-zinc-950/60 px-5 py-4">
+          <div class="font-semibold text-white">{item.name}</div>
+          <div class="text-xs text-zinc-500 mt-0.5">{item.desc}</div>
+        </div>
+      ))}
+    </div>
+
+    <p class="text-center text-xs text-zinc-500 mt-8 max-w-md mx-auto">
+      100% local execution. Your source code and conversations are only sent to Groq when you explicitly chat with the assistant.
+    </p>
+  </div>
+</section>

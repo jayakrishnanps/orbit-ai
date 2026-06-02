@@ -1,0 +1,39 @@
+---
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content="Orbit AI — Lightweight, AI-powered desktop code editor. Monaco + Groq AI sidebar + integrated terminal. Local files only. Fast native experience for Windows developers." />
+		<meta property="og:title" content="Orbit AI | Lightweight AI Code Editor" />
+		<meta property="og:description" content="A modern desktop IDE alternative with built-in AI assistance. Open local folders, edit with Monaco, chat with Groq, run terminal commands — all private and local." />
+		<meta property="og:type" content="website" />
+		<title>Orbit AI — Lightweight AI-Powered Code Editor</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+	</head>
+	<body class="bg-[#0a0a0b] text-zinc-200 antialiased">
+		<slot />
+	</body>
+</html>
+
+<style>
+	html,
+	body {
+		margin: 0;
+		width: 100%;
+		min-height: 100%;
+		font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	}
+	/* Monospace for code/terminal previews */
+	.mono {
+		font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	}
+</style>
