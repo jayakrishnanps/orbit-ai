@@ -356,7 +356,7 @@ useEffect(() => {
           <div className="flex-1 text-center text-xs font-medium tracking-wide text-zinc-500 title-orbit">
             Orbit AI — C:\Users\dev\my-orbit-project
           </div>
-          <div className="text-[10px] px-2 py-px bg-[#222222] border border-[#444444] rounded text-[#888888]">MAIN</div>
+          <div className="text-[10px] px-2 py-px bg-black border border-[#444444] rounded text-[#888888]">MAIN</div>
         </div>
 
         <div className="app-content text-sm h-[460px] sm:h-[520px]">
@@ -379,7 +379,7 @@ useEffect(() => {
           {/* Center: Editor + Terminal */}
           <div className="flex-1 flex flex-col min-w-0">
             {/* Tabs */}
-            <div className="h-9 bg-[#111113] border-b border-white/10 flex items-center px-1 shrink-0 overflow-x-auto">
+            <div className="h-9 bg-black border-b border-white/10 flex items-center px-1 shrink-0 overflow-x-auto">
               {openTabs.map(tab => (
                 <div
                   key={tab}
@@ -389,7 +389,7 @@ useEffect(() => {
                   }}
                   className={`flex items-center gap-1.5 pl-3 pr-2 py-1 text-xs rounded-t cursor-pointer mr-0.5 border-b-2 ${
                     activeFile === tab 
-                      ? 'bg-[#0a0a0b] border-white text-white' 
+                      ? 'bg-black border-white text-white' 
                       : 'border-transparent text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
@@ -488,7 +488,7 @@ useEffect(() => {
                           navigator.clipboard.writeText(m.code!);
                           showToast('Copied to clipboard');
                         }}
-                        className="text-[10px] px-2 py-px rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition"
+                        className="text-[10px] px-2 py-px rounded bg-black hover:bg-white/10 text-zinc-300 border border-white/20 transition"
                       >
                         Copy
                       </button>
@@ -515,7 +515,7 @@ useEffect(() => {
                 <button 
                   key={p}
                   onClick={() => handleQuickAction(p)}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-zinc-200 transition"
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-black hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-zinc-200 transition"
                 >
                   {p}
                 </button>
@@ -524,7 +524,7 @@ useEffect(() => {
 
             {/* Input */}
             <div className="p-2.5 border-t border-white/10">
-              <div className="flex items-center bg-zinc-950 rounded-xl border border-white/10 pr-1">
+              <div className="flex items-center bg-black rounded-xl border border-white/10 pr-1">
                 <input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
