@@ -1,32 +1,22 @@
-# Orbit AI
-Orbit AI is a minimalistic desktop code editor with an integrated AI assistant. It provides a standard file explorer, a code editing interface, a built-in terminal, and an AI chat panel that can read your context and apply targeted code edits directly to your files.
+# Orbit AI [↗](https://jayakrishnanps.github.io/orbit-ai/)
 
-![Orbit AI Interface](./marketing/src/readmeimg/Screenshot%202026-06-03%20125218.png)
+![Interface](./marketing/src/readmeimg/Screenshot%202026-06-03%20125218.png)
 
-## Tech Stack
+Desktop code editor with an integrated AI assistant. Analyzes local project context and applies surgical code edits directly to files.
 
-The application is built using the following core technologies:
-* **Framework:** Electron
-* **Frontend:** React, TypeScript, Webpack
-* **Editor:** Monaco Editor
-* **Terminal:** Xterm.js
-* **AI Integration:** Groq SDK
+## Stack
 
-## Getting Started
+- **Framework:** Electron
+- **Frontend:** React, TypeScript, Webpack
+- **Editor:** Monaco
+- **Terminal:** Xterm.js
+- **AI:** Groq SDK
 
-To run the application locally, ensure you have Node.js installed, then follow these steps:
+## Setup
 
-1. Clone the repository and navigate to the project directory.
-2. Install the required dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the application in development mode:
-   ```bash
-   npm start
-   ```
+```bash
+npm install
+npm start
+```
 
-## Configuration
-
-To use the AI chat features, you will need a Groq API key. You can provide this key directly through the settings panel within the application interface.
-
+*Requires a Groq API key (configurable in-app).*

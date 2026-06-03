@@ -1,8 +1,5 @@
 name: Deploy Marketing Site (isolated)
 
-# Only this workflow and the marketing/ folder control the GitHub Pages site.
-# The root Electron desktop application is completely unaffected.
-
 on:
   push:
     branches: [main]
@@ -44,9 +41,7 @@ jobs:
           npm run build
           touch dist/.nojekyll
         env:
-          # Astro uses the base + site from astro.config.mjs
           NODE_ENV: production
-
       - name: Upload artifact (only the built marketing/dist)
         uses: actions/upload-pages-artifact@v3
         with:
