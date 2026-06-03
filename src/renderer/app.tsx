@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MonacoEditor from '@monaco-editor/react';
-import 'monaco-editor/esm/vs/editor/editor.main.css';
+import MonacoEditor, { loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
+
+loader.config({ monaco });
 import './app.css';
 import TerminalPanel from './Terminal';
 import { FileTree, FileNode } from './FileTree';
@@ -183,7 +185,7 @@ function App() {
           return { success: false, reason: 'find-not-found' };
         }
       } catch (e) {
-        
+        console.error('Failed to parse AI code:', e);
       }
     }
 
@@ -220,7 +222,9 @@ function App() {
       <div className="ide-body">
 
         <div className="ide-activity">
-          <div className="ide-activity__icon" title="Explorer">📁</div>
+          <div className="ide-activity__icon" title="Explorer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          </div>
         </div>
 
         <div className="ide-sidebar">
@@ -264,8 +268,21 @@ function App() {
                     t.path === activeTabPath ? { ...t, content: newVal, saved: false } : t
                   ));
                 }}
-                onMount={editor => { editorRef.current = editor; }}
-                theme="vs-dark"
+                onMount={editor => {
+                  editorRef.current = editor;
+                  monaco.editor.defineTheme('orbit-black', {
+                    base: 'vs-dark',
+                    inherit: true,
+                    rules: [],
+                    colors: {
+                      'editor.background': '#000000',
+                      'editor.lineHighlightBackground': '#111111',
+                      'editorLineNumber.foreground': '#555555',
+                    }
+                  });
+                  monaco.editor.setTheme('orbit-black');
+                }}
+                theme="orbit-black"
                 options={{
                   minimap: { enabled: true },
                   fontSize: 14,
@@ -276,7 +293,9 @@ function App() {
               />
             ) : (
               <div className="ide-editor__empty">
-                <div className="ide-editor__empty-icon">🛸</div>
+                <div className="ide-editor__empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                </div>
                 <p>Open a folder and select a file to start editing</p>
               </div>
             )}

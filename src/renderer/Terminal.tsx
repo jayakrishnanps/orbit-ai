@@ -10,7 +10,7 @@ export default function TerminalPanel({ folderPath }: { folderPath?: string | nu
   useEffect(() => {
     const term = new Terminal({
       cursorBlink: true,
-      theme: { background: '#1e1e1e' },
+      theme: { background: '#000000' },
       scrollback: 2000,
       convertEol: true,
       fontSize: 14,

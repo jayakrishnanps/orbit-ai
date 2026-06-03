@@ -60,26 +60,25 @@ export default function AIChat({ currentFile, currentCode, folderPath, onApplyCo
 When the user asks you to modify, improve, comment, refactor, or change code in any way, you MUST follow this exact rule:
 
 1. Write ONE short sentence explaining what you will do.
-2. Then output the **ENTIRE modified file** inside one markdown code block. Use the correct language tag (e.g. \`\`\`javascript).
-
-Do not output any explanation, reasoning, or text after the code block.
-Do not output partial snippets — always output the full file content.
+2. Then output the **ENTIRE modified file** inside a special code block starting with \`\`\`EDIT.
 
 Example:
-User: "add many comments as possible"
+User: "add comments"
 Correct response:
-I'll add detailed comments throughout the file for better readability.
-\`\`\`javascript
+I'll add comments for better readability.
+\`\`\`EDIT
 // full file content with comments here
 \`\`\`
 
-If the user is not asking to change code, respond normally with text.`;
+If the user is ONLY asking for an explanation, DO NOT use the \`\`\`EDIT block. Respond normally with text and standard markdown code blocks for snippets.`;
 
     if (folderPath) {
       try {
         const tree = await (window as any).electronAPI.getFileTree(folderPath);
         systemPrompt += `\n\nProject tree:\n` + JSON.stringify(tree).slice(0, 3500);
-      } catch (e) {}
+      } catch (e) {
+        console.error('Failed to get file tree:', e);
+      }
     }
 
     if (currentFile) {
@@ -118,7 +117,7 @@ If the user is not asking to change code, respond normally with text.`;
 
       const raw = assistantMessage.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
 
-      const codeBlockMatch = raw.match(/```(?:\w+)?\n([\s\S]*?)```/);
+      const codeBlockMatch = raw.match(/```EDIT\n([\s\S]*?)```/);
       const extractedCode = codeBlockMatch ? codeBlockMatch[1] : null;
 
       let displayMessage = raw;
@@ -131,8 +130,6 @@ If the user is not asking to change code, respond normally with text.`;
           displayMessage = result?.success 
             ? `Done. I've updated ${fileName} with the requested changes.`
             : `I tried to update ${fileName}, but the changes could not be applied.`;
-        } else {
-          displayMessage = `I couldn't find a code block in the response. Please try again and ask me to edit the file.`;
         }
       }
 
@@ -201,13 +198,16 @@ If the user is not asking to change code, respond normally with text.`;
   return (
     <div className="chat-panel">
       <div className="chat-header">
-        <span className="chat-header__title">🛸 Orbit AI</span>
+        <span className="chat-header__title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(45 12 12)"></ellipse></svg>
+          Orbit AI
+        </span>
         <button
           className="chat-header__key-btn"
           onClick={() => setShowKey(v => !v)}
           title="Set API key"
         >
-          🔑
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
         </button>
       </div>
 
@@ -235,7 +235,12 @@ If the user is not asking to change code, respond normally with text.`;
 
       {(currentFile || attachedFiles.length > 0) && (
         <div className="chat-context">
-          {currentFile && `📄 ${currentFile.split(/[/\\]/).pop()}`}
+          {currentFile && (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              {currentFile.split(/[/\\]/).pop()}
+            </>
+          )}
           {attachedFiles.length > 0 && `  + ${attachedFiles.length} attached file(s)`}
         </div>
       )}
@@ -291,7 +296,7 @@ If the user is not asking to change code, respond normally with text.`;
                 alignItems: 'center',
                 gap: '4px'
               }}>
-                📎 {file.name}
+                <svg style={{width: 12, height: 12}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> {file.name}
                 <button 
                   onClick={() => removeAttachment(idx)}
                   style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '14px' }}
@@ -319,7 +324,7 @@ If the user is not asking to change code, respond normally with text.`;
           onClick={sendMessage}
           disabled={!input.trim() && attachedFiles.length === 0}
         >
-          ↑
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
         </button>
       </div>
     </div>

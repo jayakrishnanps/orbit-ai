@@ -151,7 +151,7 @@ ipcMain.handle('fs:getFileTree', async (_, folderPath: string) => {
 ipcMain.handle('terminal:create', async (event, cwd?: string) => {
   if (ptyProcess) {
     suppressExitMessage = true;
-    try { ptyProcess.kill(); } catch (e) {}
+    try { ptyProcess.kill(); } catch (e) { console.error('Failed to kill ptyProcess', e); }
     ptyProcess = null;
     ptySender = null;
   }
@@ -218,7 +218,7 @@ ipcMain.on('terminal:resize', (_e, { cols, rows }: { cols: number; rows: number 
 ipcMain.on('terminal:destroy', () => {
   if (ptyProcess) {
     suppressExitMessage = true;
-    try { ptyProcess.kill(); } catch (e) {}
+    try { ptyProcess.kill(); } catch (e) { console.error('Failed to kill ptyProcess', e); }
     ptyProcess = null;
     ptySender = null;
   }

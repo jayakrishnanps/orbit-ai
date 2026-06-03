@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 interface Tab {
   path: string;
   name: string;
@@ -19,13 +17,14 @@ export default function EditorTabs({ tabs, activeTabPath, onTabClick, onTabClose
       {tabs.map(tab => (
         <div
           key={tab.path}
-          className={`ide-tab ${tab.path === activeTabPath ? 'active' : ''}`}
+          className={`ide-tab ${tab.path === activeTabPath ? 'ide-tab--active' : ''}`}
           onClick={() => onTabClick(tab.path)}
         >
           <span>{tab.name}</span>
-          {!tab.saved && <span className="unsaved">●</span>}
+          {!tab.saved && <span className="unsaved" style={{fontSize: 8, color: '#aaa'}}>●</span>}
           <button
             className="ide-tab-close"
+            style={{background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 16, marginLeft: 4}}
             onClick={(e) => { e.stopPropagation(); onTabClose(tab.path); }}
           >
             ×
