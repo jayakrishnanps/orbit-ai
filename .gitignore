@@ -34,9 +34,16 @@ out/
 # Webpack build output
 .webpack/
 
-# General distribution/build directories (if added later)
+# electron-builder output (installer, unpacked app)
+dist-installer/
+
+# electron-builder temp files
+.icon-ico/
+builder-debug.yml
+
+# General distribution/build directories
 dist/
-build/
+# NOTE: build/ is intentionally NOT ignored — it contains source assets (icon.png)
 
 # Environment variables
 .env
@@ -82,3 +89,6 @@ file-explorer-editor-implementation.md
 orbit-ai-chat-terminal-fix.md
 orbit-ai-chat-streaming-actions.md
 terminal-restore-filetree-context-menu.md
+
+# Auto-generated project documentation (not for version control)
+AboutProject.txt

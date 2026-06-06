@@ -1,0 +1,71 @@
+MIT License
+
+Copyright (c) 2026 Jayakrishnan PS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+THIRD-PARTY NOTICES
+
+This application uses the following open-source software:
+
+Electron
+  License: MIT
+  https://github.com/electron/electron
+
+React
+  License: MIT
+  https://github.com/facebook/react
+
+Monaco Editor
+  License: MIT
+  https://github.com/microsoft/monaco-editor
+
+xterm.js
+  License: MIT
+  https://github.com/xtermjs/xterm.js
+
+node-pty
+  License: MIT
+  https://github.com/microsoft/node-pty
+
+Groq SDK
+  License: Apache-2.0
+  https://github.com/groq/groq-node
+
+--------------------------------------------------------------------------------
+
+GROQ API NOTICE
+
+This application integrates with the Groq AI API service. Use of the Groq API
+is subject to Groq's Terms of Service (https://groq.com/terms-of-service/) and
+Privacy Policy (https://groq.com/privacy-policy/).
+
+You are responsible for providing your own Groq API key and for ensuring that
+your use of the Groq API complies with Groq's terms and applicable laws.
+
+This application does not collect, transmit, or store any personal data beyond
+what is required for local operation. Your Groq API key is stored locally on
+your device and is only sent to the Groq API service when you send a message.
+
+--------------------------------------------------------------------------------
+
+By installing and using Orbit AI, you agree to the terms of the MIT License
+above and acknowledge the third-party notices described in this document.

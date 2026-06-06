@@ -47,7 +47,11 @@ const createWindow = (): void => {
   }
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-  mainWindow.webContents.openDevTools();
+
+  // Only open DevTools in development — never in a packaged/distributed build
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
+  }
 };
 
 ipcMain.handle('dialog:openFolder', async () => {
@@ -159,7 +163,18 @@ ipcMain.handle('terminal:create', async (event, cwd?: string) => {
   const targetCwd = cwd || process.env.USERPROFILE || process.env.HOME || process.cwd();
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const pty = require('node-pty') as typeof ptyType;
+  // Resolve node-pty correctly for both dev and packaged environments.
+  // electron-builder places extraResources at process.resourcesPath;
+  // Electron Forge asarUnpack places them adjacent to the asar archive.
+  let pty: typeof ptyType;
+  try {
+    pty = require('node-pty') as typeof ptyType;
+  } catch {
+    // Fallback for electron-builder extraResources layout
+    const resourcesPath = process.resourcesPath || '';
+    const nativePath = path.join(resourcesPath, 'node-pty');
+    pty = require(nativePath) as typeof ptyType;
+  }
 
   try {
     ptyProcess = pty.spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass'], {

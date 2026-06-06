@@ -2,7 +2,7 @@
   "name": "orbit-ai",
   "productName": "Orbit AI",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "AI-powered desktop code editor with integrated AI assistant",
   "main": ".webpack/main",
   "private": true,
   "config": {
@@ -18,7 +18,9 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "postinstall": "electron-rebuild --force --arch=x64",
-    "rebuild": "electron-rebuild --force --arch=x64"
+    "rebuild": "electron-rebuild --force --arch=x64",
+    "predist": "electron-forge package",
+    "dist": "electron-builder --win"
   },
   "keywords": [],
   "author": {
@@ -44,6 +46,7 @@
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "css-loader": "^6.11.0",
     "electron": "^42.0.0",
+    "electron-builder": "^26.15.0",
     "electron-rebuild": "^3.2.9",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
@@ -64,5 +67,60 @@
     "node-pty": "^1.1.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
+  },
+  "build": {
+    "extraMetadata": {
+      "main": ".webpack/x64/main/index.js"
+    },
+    "appId": "com.jayakrishnanps.orbit-ai",
+    "productName": "Orbit AI",
+    "copyright": "Copyright © 2026 Jayakrishnan PS",
+    "directories": {
+      "output": "dist-installer"
+    },
+    "files": [
+      ".webpack/x64/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/node-pty/**",
+      "**/*.node"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/node-pty/",
+        "to": "node-pty/",
+        "filter": [
+          "build/**",
+          "lib/**",
+          "package.json"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Orbit AI",
+      "license": "LICENSE.txt",
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "menuCategory": false
+    }
   }
 }
