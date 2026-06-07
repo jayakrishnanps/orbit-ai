@@ -20,7 +20,9 @@
     "postinstall": "electron-rebuild --force --arch=x64",
     "rebuild": "electron-rebuild --force --arch=x64",
     "predist": "electron-forge package",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "app": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/release.ps1",
+    "clean": "if exist dist-installer rmdir /s /q dist-installer && if exist out rmdir /s /q out"
   },
   "keywords": [],
   "author": {

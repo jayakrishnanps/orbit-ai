@@ -54,7 +54,7 @@ export const rendererConfig: Configuration = {
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, '.webpack/renderer'),
-    publicPath: './',
+    publicPath: '../',
     globalObject: 'self',
   },
   node: {
