@@ -19,7 +19,7 @@
     "lint": "eslint --ext .ts,.tsx .",
     "postinstall": "electron-rebuild --force --arch=x64",
     "rebuild": "electron-rebuild --force --arch=x64",
-    "predist": "electron-forge package",
+    "predist": "node scripts/webpack-build.cjs",
     "dist": "electron-builder --win",
     "app": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/release.ps1",
     "clean": "if exist dist-installer rmdir /s /q dist-installer && if exist out rmdir /s /q out"
@@ -57,6 +57,7 @@
     "node-loader": "^2.1.0",
     "style-loader": "^3.3.4",
     "ts-loader": "^9.5.7",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
   "dependencies": {
@@ -72,7 +73,7 @@
   },
   "build": {
     "extraMetadata": {
-      "main": ".webpack/x64/main/index.js"
+      "main": ".webpack/main/index.js"
     },
     "appId": "com.jayakrishnanps.orbit-ai",
     "productName": "Orbit AI",
@@ -81,7 +82,8 @@
       "output": "dist-installer"
     },
     "files": [
-      ".webpack/x64/**/*",
+      ".webpack/**/*",
+      "!.webpack/**/*.js.map",
       "package.json"
     ],
     "asar": true,
